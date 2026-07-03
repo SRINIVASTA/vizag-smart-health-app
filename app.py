@@ -12,8 +12,7 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # DECISIVE MICRO-SCHEMA RESET LAYER
-    # Ensures absolute data structure stability across all structural relational tables
+    # HARDENED SELF-HEALING DATABASE MIGRATION ENGINE
     reset_required = False
     try:
         cursor.execute("SELECT target_disposition FROM patient_queue LIMIT 1")
@@ -96,7 +95,7 @@ LANG_PACK = {
         "dispense_btn": "🎯 Confirm Physical Handout & Log Final Dispense",
         "metrics_header": "📊 Real-Time Operations Telemetry",
         "waiting": "Waiting Patients",
-        "med_count_lbl": "Active Catalog Items (Live Directory)",
+        "mod_count_lbl": "Active Catalog Items (Live Directory)",
         "beds_headline": "🛏️ Live Bed Matrix Status",
         "vacant": "vacant", "stable": "STABLE", "high_load": "HIGH LOAD", "critical": "CRITICAL",
         "ambulance": "📢 AMBULANCE DISPATCH CONTROLLER",
@@ -128,7 +127,7 @@ LANG_PACK = {
         "dispense_btn": "🎯 మందుల పంపిణీని నిర్ధారించి రికార్డ్ చేయండి",
         "metrics_header": "📊 ప్రత్యక్ష ఆరోగ్య కేంద్రం వివరాలు",
         "waiting": "వేచి ఉన్న రోగులు",
-        "med_count_lbl": "అందుబాటులో ఉన్న మొత్తం మందుల రకాలు (Live Catalog)",
+        "mod_count_lbl": "అందుబాటులో ఉన్న మొత్తం మందుల రకాలు (Live Catalog)",
         "beds_headline": "🛏️ బెడ్ల లభ్యత మరియు స్థితి వివరాలు",
         "vacant": "ఖాళీగా ఉన్నాయి", "stable": "తగినంత స్టాక్ ఉంది", "high_load": "రోగుల ఒత్తిడి ఎక్కువగా ఉంది", "critical": "అత్యంత ప్రమాదకరం",
         "ambulance": "📢 అంబులెన్స్ రూటింగ్ కంట్రోలర్ (Ambulance Route)",
@@ -137,7 +136,7 @@ LANG_PACK = {
         "sync_header": "🛡️ సురక్షిత డేటా ఎన్‌క్రిప్షన్ మరియు క్లౌడ్ సమకాలీకరణ",
         "sync_btn": "🔒 ఎన్‌క్రిప్టెడ్ క్లౌడ్ డేటా ప్యాకేజీని పంపండి",
         "crypt_shield": "🔐 FHIR రక్షణ యాక్టివ్‌గా ఉంది! ఎన్‌క్రిప్ట్ చేయబడిన అంతర్జాతీయ ప్రమాణాల డేటా ప్యాకేజీ:",
-        "cache_balanced": "📭 క్లౌడ్ డేటా సమకాలీకరణ నిల్వ ఖాళీగా ఉంది.",
+        "cache_balanced": "📭 క్లౌడ్ డేటా సమకాలీకరణ నిల్వ ఖาళీగా ఉంది.",
         "archive_header": "📁 సమగ్ర కార్యాచరణ టెలిమెట్రీ ఆర్కైవ్ నివేదికలు (Detailed Logs)",
         "csv_btn": "📥 రికార్డుల సిఎస్వి (CSV) ఫైల్‌ను డౌన్‌లోడ్ చేసుకోండి"
     }
@@ -266,7 +265,6 @@ with col2:
     cursor.execute("SELECT bed_type, total_beds, occupied_beds FROM bed_occupancy ORDER BY ROWID")
     beds = cursor.fetchall()
     
-    # Securely bridge relational tables using fully rebuilt database variables
     cursor.execute("""
         SELECT p.token_id, q.patient_name, p.prescribed_meds, p.unit_dosages_prescribed, p.doctor_name, p.aadhaar_hash, q.chief_complaint, q.target_disposition 
         FROM prescriptions p JOIN patient_queue q ON p.token_id = q.token_id 
@@ -326,7 +324,6 @@ with col2:
                            (current_time_str, selected_active_pharmacist, target_token))
             cursor.execute("UPDATE patient_queue SET status = 'DISCHARGED' WHERE token_id = ?", (target_token,))
             
-            # Save complete records containing the unified target care type disposition
             cursor.execute("""
                 INSERT INTO facility_telemetry_logs (log_date, token_id, patient_name, chief_complaint, detailed_medicines_issued, total_pills_dispensed_count, treating_doctor, dispensing_pharmacist, patient_disposition)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -365,7 +362,7 @@ if oxygen_bed_vacant <= 1: st.error(text["amb_divert"])
 else: st.success(text["amb_stable"])
 
 # =====================================================================
-# DYNAMIC GRANULAR UNIT-DOSE LOG ARCHIVE VIEW & EXPORTER
+# SECURE OPERATIONAL TELEMETRY LOG ARCHIVE VIEW & EXPORTER
 # =====================================================================
 st.markdown("---")
 st.markdown(f"### {text['archive_header']}")
@@ -386,7 +383,7 @@ if historical_logs_raw:
         
     st.download_button(
         label=text["csv_btn"], data=csv_buffer, 
-        file_name=f"uidai_secure_health_log_{datetime.now().strftime('%Y-%m-%d')}.csv", 
+        file_name=f"vizag_health_granular_unit_doses_{datetime.now().strftime('%Y-%m-%d')}.csv", 
         mime="text/csv", use_container_width=True
     )
 else: st.caption("ℹ️ Waiting for verified biometric transactions to populate the spreadsheet archive download desk.")
