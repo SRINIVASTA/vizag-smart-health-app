@@ -118,6 +118,7 @@ text = LANG_PACK[lang_code]
 st.title(text["title"])
 st.caption(text["subtitle"])
 st.markdown("---")
+
 col1, col2 = st.columns([1, 1.2])
 
 with col1:
@@ -135,7 +136,7 @@ with col1:
         cursor = conn.cursor()
         today = datetime.now().strftime('%Y-%m-%d')
         cursor.execute("SELECT COUNT(*) FROM patient_queue WHERE category = ? AND date(arrival_time) = ?", (category, today))
-        count = cursor.fetchone() + 1
+        count = cursor.fetchone()[0] + 1
         token_id = f"{'EMER' if category=='Emergency' else 'MAT' if category=='Maternal' else 'GEN'}-{count:03d}"
         cursor.execute("INSERT INTO patient_queue (token_id, category, status, arrival_time) VALUES (?, ?, 'WAITING', ?)", (token_id, category, datetime.now().isoformat()))
         conn.commit()
@@ -151,19 +152,18 @@ with col1:
         else:
             st.warning(text["empty_warning"])
 
-    # ── PATIENT OUTFLOW: DOCTOR CLEARANCE ENGINE (REDUCES TELEMETRY) ──
+    # ── PATIENT OUTFLOW: DOCTOR CLEARANCE ENGINE (REDUCES TELEMETRY LOAD) ──
     st.markdown("---")
     st.header(text["doc_header"])
     if st.button(text["call_btn"], use_container_width=True):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        # Find the oldest waiting patient currently sitting in the triage queue
         cursor.execute("SELECT token_id FROM patient_queue WHERE status = 'WAITING' ORDER BY arrival_time ASC LIMIT 1")
         next_patient = cursor.fetchone()
         
         if next_patient:
-            target_token = next_patient
-            # Update status to COMPLETED to remove them from the active waiting pool
+            # FIX: Safely unpack the single-item tuple string element index zero before query binding execution
+            target_token = next_patient[0]
             cursor.execute("UPDATE patient_queue SET status = 'COMPLETED', called_time = ? WHERE token_id = ?", (datetime.now().isoformat(), target_token))
             conn.commit()
             st.toast(f"👨‍⚕️ Treated and Discharged: {target_token}")
@@ -208,14 +208,13 @@ with col2:
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM patient_queue WHERE status = 'WAITING'")
-    waiting_count = cursor.fetchone()
+    waiting_count = cursor.fetchone()[0]
     cursor.execute("SELECT bed_type, total_beds, occupied_beds FROM bed_occupancy ORDER BY ROWID")
     beds = cursor.fetchall()
     cursor.execute("SELECT doctor_name, specialty, attendance_status FROM doctor_roster")
     roster = cursor.fetchall()
     conn.close()
     
-    # Live KPI Metric Card updates automatically
     st.metric(label=text["waiting"], value=f"{waiting_count}")
     
     st.markdown(f"### {text['beds_headline']}")
@@ -228,12 +227,11 @@ with col2:
         color_tag = "🔴" if ratio <= 0.1 else "🟡" if ratio <= 0.3 else "✅"
         st.markdown(f"* **{b_type}**: {occupied}/{total} ({vacant} {text['vacant']}) ──> {color_tag} **{stress_label}**")
 
-    # BED CLEARANCE TRIGGER (REDUCES OVERLOAD)
+    # Bed Clearance Action
     if oxygen_bed_vacant <= 1:
         if st.button(text["discharge_bed_btn"], type="secondary", use_container_width=True):
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
-            # De-escalate occupied bed count from 9 down to 8 to restore safety margins
             cursor.execute("UPDATE bed_occupancy SET occupied_beds = occupied_beds - 1 WHERE bed_type = 'Oxygen Beds'")
             conn.commit()
             conn.close()
@@ -243,7 +241,7 @@ with col2:
     for name, spec, status in roster:
         st.markdown(f"* {'🟢' if status == 'PRESENT' else '⚪'} **{name}** ({spec}) ──> {status}")
 
-# ── AMBULANCE DIRECTION SYSTEM AUTOMATION ──
+# ── AMBULANCE ROUTING INTERCEPTION ──
 st.markdown("---")
 st.markdown(f"### {text['ambulance']}")
 if oxygen_bed_vacant <= 1:
@@ -251,7 +249,7 @@ if oxygen_bed_vacant <= 1:
 else:
     st.success(text["amb_stable"])
 
-# ── COMPLIANCE FHIR SYNCER ──
+# ── COMPLIANCE FHIR ARCHIVE SYNC ──
 st.markdown("---")
 st.markdown(f"### {text['sync_header']}")
 if st.button(text["sync_btn"], use_container_width=True):
@@ -262,7 +260,7 @@ if st.button(text["sync_btn"], use_container_width=True):
     conn.close()
     
     if row:
-        fhir_payload_json = InteroperabilityEngine.export_to_fhir_standard_json(row, row)
+        fhir_payload_json = InteroperabilityEngine.export_to_fhir_standard_json(row[0], row[1])
         encrypted_fhir_stream = CryptoProtocol.encrypt(fhir_payload_json)
         st.info(f"{text['crypt_shield']}")
         st.code(fhir_payload_json, language="json")
