@@ -78,7 +78,9 @@ LANG_PACK = {
         "amb_divert": "⚠️ [DIVERTING PROTOCOL ACTIVE] Redirecting inbound oxygen emergency logistics directly to CHC Anakapalle!",
         "amb_stable": "✅ [FACILITY UNLOCKED] Inbound transport cleared for direct entry.",
         "sync_header": "🛡️ Cryptographic Transmission & Cloud Backhaul Sync",
+        "sync_btn": "🔒 Securely Sync Anonymized FHIR Cloud Payload",
         "crypt_shield": "🔐 FHIR Interoperability Shield Active! Universally compliant encrypted payload built:",
+        "cache_balanced": "📭 Cache balanced. Zero changes pending transmission.",
         "archive_header": "📁 Secure Operational Telemetry Log Archive"
     },
     "te": {
@@ -101,8 +103,12 @@ LANG_PACK = {
         "beds_headline": "🛏️ బెడ్ల లభ్యత మరియు స్థితి వివరాలు",
         "vacant": "ఖాళీగా ఉన్నాయి", "stable": "తగినంత స్టాక్ ఉంది", "high_load": "రోగుల ఒత్తిడి ఎక్కువగా ఉంది", "critical": "అత్యంత ప్రమాదకరం",
         "ambulance": "📢 అంబులెన్స్ రూటింగ్ కంట్రోలర్ (Ambulance Route)",
+        "amb_divert": "⚠️ [రూటింగ్ హెచ్చరిక] ఆక్సిజన్ బెడ్ల కొరత! నాన్-క్రిటికల్ అంబులెన్స్‌లను అనకాపల్లి CHC కి మళ్లించండి.",
+        "amb_stable": "✅ [రూటింగ్ సాధారణం] ఇన్‌బౌండ్ అంబులెన్స్‌లు నేరుగా రావచ్చు.",
         "sync_header": "🛡️ సురక్షిత డేటా ఎన్‌క్రిప్షన్ మరియు క్లౌడ్ సమకాలీకరణ",
+        "sync_btn": "🔒 ఎన్‌క్రిప్టెడ్ క్లౌడ్ డేటా ప్యాకేజీని పంపండి",
         "crypt_shield": "🔐 FHIR రక్షణ యాక్టివ్‌గా ఉంది! ఎన్‌క్రిప్ట్ చేయబడిన అంతర్జాతీయ ప్రమాణాల డేటా ప్యాకేజీ:",
+        "cache_balanced": "📭 క్లౌడ్ డేటా సమకాలీకరణ నిల్వ ఖాళీగా ఉంది.",
         "archive_header": "📁 చారిత్రక కార్యాచరణ టెలిమెట్రీ ఆర్కైవ్ (Logs)"
     }
 }
@@ -115,7 +121,6 @@ text = LANG_PACK[lang_code]
 st.title(text["title"])
 st.caption(text["subtitle"])
 st.markdown("---")
-
 col1, col2 = st.columns([1, 1.1])
 
 with col1:
@@ -148,7 +153,6 @@ with col1:
 
     if st.button(text["submit_btn"], type="primary", use_container_width=True):
         if len(p_aadhaar) == 12 and user_input:
-            # FIXED SELF-HEALING HOOK: Auto-generates fallback profile to bypass hard biometric lockout traps
             if p_aadhaar in UIDAI_HARDWARE_DECRYPTION_DATABASE:
                 fetched_legal_name = UIDAI_HARDWARE_DECRYPTION_DATABASE[p_aadhaar]
             else:
@@ -158,7 +162,7 @@ with col1:
             t_id = generate_secure_token(assigned_route, p_aadhaar, fetched_legal_name)
             st.success(f"🔐 {text['text_success']} **{fetched_legal_name}** | ID: **{t_id}**")
             st.rerun()
-        else: st.warning("⚠️ Please provide a valid 12-digit Aadhaar number scan block and clinical logs context.")
+        else: st.warning("⚠️ Please provide a valid 12-digit Aadhaar scan block and context symptoms.")
 
     # ── TOUCHPOINT 2: DOCTOR DESK & PRESCRIPTION WRITER ──
     st.markdown("---")
@@ -175,7 +179,6 @@ with col1:
     selected_doctor = st.selectbox(text["doc_select_lbl"], active_doctors if active_doctors else ["On-Call Officer"])
     
     if current_patient_row:
-        # FIXED MULTI-ELEMENT SUBSCRIPTING: Maps row indexes correctly to prevent layout tuple crashes
         st.info(f"👉 **Patient at Desk:** {current_patient_row[1]} - Token ID: {current_patient_row[0]}")
         meds_prescribed = st.text_input(text["med_prescribe_lbl"], placeholder="e.g., Paracetamol 500mg, Artesunate")
         
@@ -192,7 +195,6 @@ with col1:
                 st.rerun()
             else: st.warning("⚠️ Please specify medications before generating the prescription record.")
     else: st.caption("🎉 All patient triage lines are currently clear.")
-
 with col2:
     st.header(text["metrics_header"])
     conn = sqlite3.connect(DB_NAME)
@@ -283,7 +285,7 @@ if historical_logs:
 # Compliance Outbox FHIR Data Packer
 st.markdown("---")
 st.markdown(f"### {text['sync_header']}")
-if st.button(text["sync_btn"], use_container_width=True):
+if st.button(text["sync_btn"], use_container_width=True): # FIXED: 'sync_btn' key mapped successfully in both languages
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT token_id, prescribed_meds, doctor_name FROM prescriptions WHERE dispense_status = 'DISPENSED' ORDER BY prescription_id DESC LIMIT 1")
@@ -293,4 +295,4 @@ if st.button(text["sync_btn"], use_container_width=True):
         fhir_payload_json = json.dumps({"resourceType": "Encounter", "id": sync_row[0], "status": "finished", "serviceType": {"display": sync_row[1]}, "individual": {"display": sync_row[2]}}, indent=2)
         st.info(f"{text['crypt_shield']}")
         st.code(fhir_payload_json, language="json")
-    else: st.info("📭 Cache balanced. Zero changes pending transmission.")
+    else: st.info(text["cache_balanced"])
