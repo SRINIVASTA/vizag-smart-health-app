@@ -39,7 +39,7 @@ def init_db():
         log_id INTEGER PRIMARY KEY AUTOINCREMENT, log_date TEXT, token_id TEXT, patient_name TEXT, aadhaar_hash_verified TEXT,
         chief_complaint TEXT, detailed_medicines_issued TEXT, total_pills_dispensed_count INTEGER, treating_doctor TEXT, dispensing_pharmacist TEXT, dispense_status TEXT)''')
     
-    # Seed parameters safely with realistic volume spaces
+    # Seed parameters safely
     cursor.execute("INSERT OR IGNORE INTO medicine_stock VALUES ('Paracetamol 500mg', 1200, 500), ('Anti-Venom Injection', 30, 10), ('Artesunate (Malaria)', 150, 50)")
     cursor.execute("INSERT OR IGNORE INTO bed_occupancy VALUES ('General Ward', 20, 14), ('Oxygen Beds', 10, 9), ('Isolation Unit', 5, 2)")
     cursor.execute("INSERT OR IGNORE INTO doctor_roster VALUES ('DOC-01', 'Dr. Ramesh Babu', 'General Physician', 'PRESENT'), ('DOC-02', 'Dr. S. Lakshmi', 'Maternal Specialist', 'PRESENT')")
@@ -79,7 +79,7 @@ LANG_PACK = {
         "dispense_btn": "🎯 Confirm Physical Inventory Handout & Log Final Dispense",
         "metrics_header": "📊 Real-Time Operations Telemetry",
         "waiting": "Waiting Patients",
-        "med_count_lbl": "Active Catalog Items (Live Directory)",
+        "mod_count_lbl": "Active Catalog Items (Live Directory)", # FIXED: Re-mapped name key to match layout variables
         "beds_headline": "🛏️ Live Bed Matrix Status",
         "vacant": "vacant", "stable": "STABLE", "high_load": "HIGH LOAD", "critical": "CRITICAL",
         "ambulance": "📢 AMBULANCE DISPATCH CONTROLLER",
@@ -93,7 +93,7 @@ LANG_PACK = {
         "csv_btn": "📥 Download Consolidated CSV Audit Spreadsheet Report"
     },
     "te": {
-        "title": "🏥 విశాఖపట్నం జిల్లా స్మార్ట్ హెల్త్ ఎంటర్‌ప్రైజ్ హబ్",
+        "title": "🏥  విశాఖపట్నం జిల్లా స్మార్ట్ హెల్త్ ఎంటర్‌ప్రైజ్ హబ్",
         "subtitle": "ఆటోమేటిక్ ఆధార్ రిజిస్ట్రేషన్ మరియు సమగ్ర మందుల పంపిణీ నియంత్రణ వ్యవస్థ.",
         "triage_header": "🛰️ ప్రవేశ ద్వారం: ఆటోమేటిక్ ఆధార్ బయోమెట్రిక్ స్కాన్ కౌంటర్",
         "doc_header": "👨‍⚕️ వైద్యుల చికిత్స మరియు మందుల ప్రిస్క్రిప్షన్ గది",
@@ -110,9 +110,9 @@ LANG_PACK = {
         "dispense_btn": "🎯 మందుల పంపిణీని నిర్ధారించి రికార్డ్ చేయండి",
         "metrics_header": "📊 ప్రత్యక్ష ఆరోగ్య కేంద్రం వివరాలు",
         "waiting": "వేచి ఉన్న రోగులు",
-        "med_count_lbl": "అందుబాటులో ఉన్న మొత్తం మందుల రకాలు (Live Catalog)",
+        "mod_count_lbl": "అందుబాటులో ఉన్న మొత్తం మందుల రకాలు (Live Catalog)",
         "beds_headline": "🛏️ బెడ్ల లభ్యత మరియు స్థితి వివరాలు",
-        "vacant": "ఖాళీగా ఉన్నాయి", "stable": "తగినంత స్టాక్ ఉంది", "high_load": "రోగుల ఒత్తిడి ఎక్కువగా ఉంది", "critical": "అత్యంత ప్రమాదకరం",
+        "vacant": "ఖాళీగా ఉన్నాయి", "stable": "తగినంత స్టాక్ ఉంది", "high_load": "రోగుల ఒత్తిడి ఎక్కువగా ఉంది", "critical": "అत्यంత ప్రమాదకరం",
         "ambulance": "📢 అంబులెన్స్ రూటింగ్ కంట్రోలర్ (Ambulance Route)",
         "amb_divert": "⚠️ [రూటింగ్ హెచ్చరిక] ఆక్సిజన్ బెడ్ల కొరత! నాన్-క్రిటికల్ అంబులెన్స్‌లను అనకాపల్లి CHC కి మళ్లించండి.",
         "amb_stable": "✅ [రూటింగ్ సాధారణం] ఇన్‌బౌండ్ అంబులెన్స్‌లు నేరుగా రావచ్చు.",
@@ -133,7 +133,6 @@ text = LANG_PACK[lang_code]
 st.title(text["title"])
 st.caption(text["subtitle"])
 st.markdown("---")
-
 col1, col2 = st.columns([1, 1.1])
 
 with col1:
@@ -145,7 +144,6 @@ with col1:
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT doctor_name FROM doctor_roster WHERE attendance_status = 'PRESENT'")
-    # FIX A: Use list comprehension to unpack tuples into a clean flat string array immediately
     gate_doctor_options = [row[0] for row in cursor.fetchall()]
     
     cursor.execute("SELECT item_name FROM medicine_stock")
@@ -199,7 +197,6 @@ with col1:
     
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    # FIX B: Passes the clean string variable filter smoothly to clear the ProgrammingError crash
     cursor.execute("SELECT token_id, patient_name, chief_complaint FROM patient_queue WHERE status = 'WAITING' AND target_doctor = ? ORDER BY arrival_time ASC LIMIT 1", (doc_desk_filter,))
     current_patient_row = cursor.fetchone()
     conn.close()
@@ -214,7 +211,6 @@ with col1:
         if selected_prescription_meds:
             st.markdown("##### 💊 Set Precise Unit Counts / Pill Volumes:")
             for medicine in selected_prescription_meds:
-                # Creates an isolated interactive number picker per item
                 quantity_pill_count = st.number_input(f"Count for {medicine}:", min_value=1, max_value=100, value=10, key=f"dose_{medicine}")
                 dosage_allocation_map[medicine] = int(quantity_pill_count)
         
@@ -234,7 +230,6 @@ with col1:
                 st.rerun()
             else: st.warning("⚠️ Please select at least one medication from the active inventory list.")
     else: st.caption(f"🎉 No patients currently waiting specifically for {doc_desk_filter}.")
-
 with col2:
     st.header(text["metrics_header"])
     conn = sqlite3.connect(DB_NAME)
@@ -265,7 +260,7 @@ with col2:
     
     meta_col1, meta_col2 = st.columns(2)
     with meta_col1: st.metric(label=text["waiting"], value=f"{waiting_count} Patients")
-    with meta_col2: st.metric(label=text["mod_count_lbl"], value=f"{total_registered_medicines} Types")
+    with meta_col2: st.metric(label=text[ "mod_count_lbl"], value=f"{total_registered_medicines} Types") # FIXED: Unified non-crashing key call
     
     # ── TOUCHPOINT 3: DIRECT-PULL SINGLE-CLICK PHARMACY VERIFICATION ──
     st.markdown("---")
@@ -284,7 +279,7 @@ with col2:
         st.markdown("##### 📋 Verified Prescription Orders Checklist:")
         parsed_dosages = json.loads(target_json_doses) if target_json_doses else {}
         for medicine_name, pill_volume in parsed_dosages.items():
-            st.info(f"Pkg Output Metric: **{medicine_name}** ──> Handout Requirement: **{pill_volume} units**")
+            st.info(f"👉 **{medicine_name}** ──> Handout Volume Required: **{pill_volume} units**")
             
         if st.button(text["dispense_btn"], type="primary", use_container_width=True):
             conn = sqlite3.connect(DB_NAME)
@@ -333,7 +328,7 @@ if oxygen_bed_vacant <= 1: st.error(text["amb_divert"])
 else: st.success(text["amb_stable"])
 
 # =====================================================================
-# HISTORICAL TELEMETRY GRAPHICS VIEW LOG ARCHIVE DOWNLOADER
+# HISTROLLER TELEMETRY EXPORTER ARCHIVE LEDGER
 # =====================================================================
 st.markdown("---")
 st.markdown(f"### {text['archive_header']}")
@@ -354,7 +349,7 @@ if historical_logs_raw:
         
     st.download_button(
         label=text["csv_btn"], data=csv_buffer, 
-        file_name=f"uidai_secure_health_log_{datetime.now().strftime('%Y-%m-%d')}.csv", 
+        file_name=f"vizag_health_granular_unit_doses_{datetime.now().strftime('%Y-%m-%d')}.csv", 
         mime="text/csv", use_container_width=True
     )
 else: st.caption("ℹ️ Waiting for verified biometric transactions to populate the spreadsheet archive download desk.")
@@ -372,4 +367,4 @@ if st.button(text["sync_btn"], use_container_width=True):
         fhir_payload_json = json.dumps({"resourceType": "Encounter", "id": sync_row[0], "status": "finished", "serviceType": {"display": sync_row[1]}, "participant": [{"individual": {"display": sync_row[2]}}, {"individual": {"display": sync_row[3]}}]}, indent=2)
         st.info(f"{text['crypt_shield']}")
         st.code(fhir_payload_json, language="json")
-    else: st.info(text["cache_balanced"])
+    else: st.info("📭 Cache balanced. Zero changes pending transmission.")
