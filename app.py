@@ -12,22 +12,28 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # HARDENED SELF-HEALING DATABASE MIGRATION ENGINE
-    # Drops tables only if structural column elements mismatch previous trial schema models
+    # DECISIVE MICRO-SCHEMA RESET LAYER
+    # Ensures absolute data structure stability across all structural relational tables
+    reset_required = False
     try:
         cursor.execute("SELECT target_disposition FROM patient_queue LIMIT 1")
         cursor.execute("SELECT doctor_prefix FROM doctor_roster LIMIT 1")
         cursor.execute("SELECT allowed_designation FROM medicine_stock LIMIT 1")
+        cursor.execute("SELECT unit_dosages_prescribed FROM prescriptions LIMIT 1")
+        cursor.execute("SELECT patient_disposition FROM facility_telemetry_logs LIMIT 1")
     except sqlite3.OperationalError:
-        # Clear old tracking tables cleanly to establish a valid enterprise join state
+        reset_required = True
+        
+    if reset_required:
         cursor.execute("DROP TABLE IF EXISTS patient_queue")
+        cursor.execute("DROP TABLE IF EXISTS medicine_stock")
+        cursor.execute("DROP TABLE IF EXISTS bed_occupancy")
+        cursor.execute("DROP TABLE IF EXISTS doctor_roster")
+        cursor.execute("DROP TABLE IF EXISTS pharma_roster")
         cursor.execute("DROP TABLE IF EXISTS prescriptions")
         cursor.execute("DROP TABLE IF EXISTS facility_telemetry_logs")
-        cursor.execute("DROP TABLE IF EXISTS doctor_roster")
-        cursor.execute("DROP TABLE IF EXISTS medicine_stock")
-        cursor.execute("DROP TABLE IF EXISTS pharma_roster")
         
-    # Structural Core Schemas
+    # Structural Core Schemas Construction
     cursor.execute('''CREATE TABLE IF NOT EXISTS patient_queue (
         token_id TEXT PRIMARY KEY, category TEXT, status TEXT, arrival_time TIMESTAMP, called_time TIMESTAMP,
         patient_aadhaar_hash TEXT, patient_name TEXT, target_doctor TEXT, chief_complaint TEXT, target_disposition TEXT DEFAULT 'Out-Patient')''')
@@ -260,7 +266,7 @@ with col2:
     cursor.execute("SELECT bed_type, total_beds, occupied_beds FROM bed_occupancy ORDER BY ROWID")
     beds = cursor.fetchall()
     
-    # Securely bridge relational tables including the verified target_disposition column elements
+    # Securely bridge relational tables using fully rebuilt database variables
     cursor.execute("""
         SELECT p.token_id, q.patient_name, p.prescribed_meds, p.unit_dosages_prescribed, p.doctor_name, p.aadhaar_hash, q.chief_complaint, q.target_disposition 
         FROM prescriptions p JOIN patient_queue q ON p.token_id = q.token_id 
@@ -359,7 +365,7 @@ if oxygen_bed_vacant <= 1: st.error(text["amb_divert"])
 else: st.success(text["amb_stable"])
 
 # =====================================================================
-# HISTORICAL DATALOG CONSOLE ARCHIVE GRID
+# DYNAMIC GRANULAR UNIT-DOSE LOG ARCHIVE VIEW & EXPORTER
 # =====================================================================
 st.markdown("---")
 st.markdown(f"### {text['archive_header']}")
@@ -395,7 +401,7 @@ if st.button(text["sync_btn"], use_container_width=True):
     sync_row = cursor.fetchone()
     conn.close()
     if sync_row:
-        fhir_payload_json = json.dumps({"resourceType": "Encounter", "id": sync_row, "status": "finished", "serviceType": {"display": sync_row}, "participant": [{"individual": {"display": sync_row}}, {"individual": {"display": sync_row}}]}, indent=2)
+        fhir_payload_json = json.dumps({"resourceType": "Encounter", "id": sync_row[0], "status": "finished", "serviceType": {"display": sync_row[1]}, "participant": [{"individual": {"display": sync_row[2]}}, {"individual": {"display": sync_row[3]}}]}, indent=2)
         st.info(f"{text['crypt_shield']}")
         st.code(fhir_payload_json, language="json")
     else: st.info("📭 Cache balanced. Zero changes pending transmission.")
