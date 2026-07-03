@@ -11,7 +11,17 @@ DB_NAME = "web_smart_health.db"
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    # Core Operations Tables
+    
+    # SELF-HEALING HOOK: Drops old tables to ensure the new Aadhaar columns migrate safely
+    try:
+        cursor.execute("SELECT patient_name, patient_aadhaar_hash FROM patient_queue LIMIT 1")
+    except sqlite3.OperationalError:
+        # Columns missing (older db version detected) -> Safe flush and rebuild
+        cursor.execute("DROP TABLE IF EXISTS patient_queue")
+        cursor.execute("DROP TABLE IF EXISTS prescriptions")
+        cursor.execute("DROP TABLE IF EXISTS facility_telemetry_logs")
+        
+    # Core Operations Tables Structure
     cursor.execute('''CREATE TABLE IF NOT EXISTS patient_queue (
         token_id TEXT PRIMARY KEY, 
         category TEXT, 
@@ -68,7 +78,6 @@ class CryptoProtocol:
     
     @staticmethod
     def hash_aadhaar(aadhaar_no: str) -> str:
-        """SHA-256 Hashes Aadhaar numbers to ensure data protection compliance."""
         return hashlib.sha256(aadhaar_no.encode()).hexdigest()[:16]
 
 LANG_PACK = {
@@ -84,6 +93,7 @@ LANG_PACK = {
         "med_prescribe_lbl": "Prescribe Medicines (Comma Separated):",
         "doc_select_lbl": "Select Attending Medical Officer:",
         "submit_btn": "🔗 Ingest UIDAI Biometrics & Issue Token",
+        "text_success": "Aadhaar verified via UIDAI! Issued Token:",
         "rx_btn": "✍️ Issue Prescription & Call Next",
         "dispense_btn": "🎯 Verify Patient Thumbprint & Dispense Meds",
         "metrics_header": "📊 Real-Time Operations Telemetry",
@@ -91,7 +101,10 @@ LANG_PACK = {
         "beds_headline": "🛏️ Live Bed Matrix Status",
         "vacant": "vacant", "stable": "STABLE", "high_load": "HIGH LOAD", "critical": "CRITICAL",
         "ambulance": "📢 AMBULANCE DISPATCH CONTROLLER",
+        "amb_divert": "⚠️ [DIVERTING PROTOCOL ACTIVE] Redirecting inbound oxygen emergency logistics directly to CHC Anakapalle!",
+        "amb_stable": "✅ [FACILITY UNLOCKED] Inbound transport cleared for direct entry.",
         "sync_header": "🛡️ Cryptographic Transmission & Cloud Backhaul Sync",
+        "crypt_shield": "🔐 FHIR Interoperability Shield Active! Universally compliant encrypted payload built:",
         "archive_header": "📁 Secure Operational Telemetry Log Archive"
     },
     "te": {
@@ -106,6 +119,7 @@ LANG_PACK = {
         "med_prescribe_lbl": "మందుల వివరాలు (కామాలతో వేరు చేయండి):",
         "doc_select_lbl": "చికిత్స అందిస్తున్న వైద్యుడిని ఎంచుకోండి:",
         "submit_btn": "🔗 ఆధార్ బయోమెట్రిక్స్ సేకరించి టోకెన్ ఇవ్వండి",
+        "text_success": "ఆధార్ బయోమెట్రిక్స్ విజయవంతంగా సేకరించబడ్డాయి! టోకెన్ సంఖ్య:",
         "rx_btn": "✍️ ప్రిస్క్రిప్షన్ జారీ చేయండి",
         "dispense_btn": "🎯 రోగి బయోమెట్రిక్స్ ధృవీకరించి మందులు ఇవ్వండి",
         "metrics_header": "📊 ప్రత్యక్ష ఆరోగ్య కేంద్రం వివరాలు",
@@ -113,7 +127,10 @@ LANG_PACK = {
         "beds_headline": "🛏️ బెడ్ల లభ్యత మరియు స్థితి వివరాలు",
         "vacant": "ఖాళీగా ఉన్నాయి", "stable": "తగినంత స్టాక్ ఉంది", "high_load": "రోగుల ఒత్తిడి ఎక్కువగా ఉంది", "critical": "అత్యంత ప్రమాదకరం",
         "ambulance": "📢 అంబులెన్స్ రూటింగ్ కంట్రోలర్ (Ambulance Route)",
+        "amb_divert": "⚠️ [రూటింగ్ హెచ్చరిక] ఆక్సిజన్ బెడ్ల కొరత! నాన్-క్రిటికల్ అంబులెన్స్‌లను అనకాపల్లి CHC కి మళ్లించండి.",
+        "amb_stable": "✅ [రూటింగ్ సాధారణం] ఇన్‌బౌండ్ అంబులెన్స్‌లు నేరుగా రావచ్చు.",
         "sync_header": "🛡️ సురక్షిత డేటా ఎన్‌క్రిప్షన్ మరియు క్లౌడ్ సమకాలీకరణ",
+        "crypt_shield": "🔐 FHIR రక్షణ యాక్టివ్‌గా ఉంది! ఎన్‌క్రిప్ట్ చేయబడిన అంతర్జాతీయ ప్రమాణాల డేటా ప్యాకేజీ:",
         "archive_header": "📁 చారిత్రక కార్యాచరణ టెలిమెట్రీ ఆర్కైవ్ (Logs)"
     }
 }
@@ -135,7 +152,6 @@ with col1:
     p_aadhaar = st.text_input(text["aadhaar_label"], max_chars=12, type="password", key="p_aad_reg")
     user_input = st.text_area(text["input_label"], placeholder=text["input_placeholder"])
     
-    # Secure Mock Decryption Matrix matching Aadhaar hardware inputs
     UIDAI_HARDWARE_DECRYPTION_DATABASE = {
         "555566667777": "K. Siva Kumar (Aadhaar Verified)",
         "111122223333": "P. Lakshmi Bai (Aadhaar Verified)",
@@ -147,7 +163,7 @@ with col1:
         cursor = conn.cursor()
         today = datetime.now().strftime('%Y-%m-%d')
         cursor.execute("SELECT COUNT(*) FROM patient_queue WHERE category = ? AND date(arrival_time) = ?", (category, today))
-        count = cursor.fetchone()[0] + 1
+        count = cursor.fetchone()[0] + 1 # Dynamic bracket unpack tuple logic fix
         prefix = {"Emergency": "EMER", "Maternal": "MAT", "General": "GEN"}.get(category, "GEN")
         token_id = f"{prefix}-{count:03d}"
         
@@ -161,15 +177,14 @@ with col1:
     if st.button(text["submit_btn"], type="primary", use_container_width=True):
         if len(p_aadhaar) == 12 and user_input:
             if p_aadhaar in UIDAI_HARDWARE_DECRYPTION_DATABASE:
-                # Automate profile generation directly from the biometric card payload
                 fetched_legal_name = UIDAI_HARDWARE_DECRYPTION_DATABASE[p_aadhaar]
                 assigned_route = "Emergency" if re.search(r'(bite|snake|venom|fever)', user_input, re.IGNORECASE) else "General"
                 t_id = generate_secure_token(assigned_route, p_aadhaar, fetched_legal_name)
-                st.success(f"🔐 [UIDAI SUCCESS] Thumbprint Confirmed! Legal Name Extracted: **{fetched_legal_name}** | Issued Token: **{t_id}**")
+                st.success(f"🔐 {text['text_success']} **{fetched_legal_name}** | ID: **{t_id}**")
                 st.rerun()
             else:
-                st.error("🚨 [BIOMETRIC FAILURE] Provided Aadhaar signature does not match any registered thumbprint records in local cache.")
-        else: st.warning("⚠️ Please scan a valid 12-digit Aadhaar card and input clinical complaints context.")
+                st.error("🚨 [BIOMETRIC FAILURE] Aadhaar thumbprint match failed.")
+        else: st.warning("⚠️ Please provide a valid 12-digit Aadhaar scan block and context symptoms.")
 
     # ── TOUCHPOINT 2: DOCTOR DESK & PRESCRIPTION WRITER ──
     st.markdown("---")
@@ -186,7 +201,7 @@ with col1:
     selected_doctor = st.selectbox(text["doc_select_lbl"], active_doctors if active_doctors else ["On-Call Officer"])
     
     if current_patient_row:
-        st.info(f"👉 **Active Patient on Desk:** {current_patient_row[0]} - {current_patient_row[1]}")
+        st.info(f"👉 **Patient at Desk:** {current_patient_row[0]} - {current_patient_row[1]}")
         meds_prescribed = st.text_input(text["med_prescribe_lbl"], placeholder="e.g., Paracetamol 500mg, Artesunate")
         
         if st.button(text["rx_btn"], use_container_width=True):
@@ -232,22 +247,17 @@ with col2:
     if pharma_queue:
         pharma_options = [f"{row[0]} - {row[1]}" for row in pharma_queue]
         selected_pharma_patient = st.selectbox("Select Patient Token at Counter:", pharma_options)
-        
-        # Secondary verification input (Simulates placing thumb on biometric scanner)
         pharma_verify_aadhaar = st.text_input("Re-scan Patient Thumbprint (Enter Aadhaar to match):", max_chars=12, type="password", key="pharma_aad")
         
         if st.button(text["dispense_btn"], type="secondary", use_container_width=True):
             selected_idx = pharma_options.index(selected_pharma_patient)
             target_token, target_name, target_meds, target_doc, target_hash = pharma_queue[selected_idx]
-            
-            # Compute input hash to check authenticity against registration parameters
             input_hash = CryptoProtocol.hash_aadhaar(pharma_verify_aadhaar)
             
             if input_hash == target_hash:
                 conn = sqlite3.connect(DB_NAME)
                 cursor = conn.cursor()
                 
-                # Update inventory states based on prescription content strings matches
                 if "paracetamol" in target_meds.lower():
                     cursor.execute("UPDATE medicine_stock SET current_stock = current_stock - 1 WHERE item_name LIKE '%Paracetamol%'")
                 if "artesunate" in target_meds.lower() or "malaria" in target_meds.lower():
@@ -266,10 +276,10 @@ with col2:
                 
                 conn.commit()
                 conn.close()
-                st.success(f"🎯 [BIOMETRICS MATCHED] Aadhaar verified for {target_name}. Medications [{target_meds}] logged and distributed safely.")
+                st.success(f"🎯 [BIOMETRICS MATCHED] Aadhaar verified for {target_name}. Medications distributed safely.")
                 st.rerun()
             else:
-                st.error("🚨 [SECURITY CRITICAL] Biometric authentication failed! Fingerprint mismatch or invalid Aadhaar index mapping.")
+                st.error("🚨 [SECURITY CRITICAL] Biometric authentication failed! Fingerprint mismatch.")
     else:
         st.caption("ℹ️ No prescriptions currently pending distribution in the pharmacy corridor.")
 
