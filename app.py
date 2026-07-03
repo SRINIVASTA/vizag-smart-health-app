@@ -40,10 +40,10 @@ class InteroperabilityEngine:
         fhir_encounter = {
             "resourceType": "Encounter",
             "id": patient_token,
-            "status": "in-progress",
+            "status": "finished",
             "class": {"system": "http://hl7.org", "code": "AMB", "display": "ambulatory"},
             "serviceType": {"coding": [{"system": "http://snomed.info", "code": "394577000", "display": assigned_track}]},
-            "period": {"start": datetime.now().isoformat()}
+            "period": {"end": datetime.now().isoformat()}
         }
         return json.dumps(fhir_encounter, indent=2)
 
@@ -52,9 +52,13 @@ LANG_PACK = {
         "title": "🏥 Visakhapatnam Smart Health Enterprise Hub",
         "subtitle": "Hardware-linked, ML-optimized management of stock, crowds, beds, and rosters.",
         "triage_header": "📝 Frontline Patient AI Triage",
+        "doc_header": "👨‍⚕️ Doctor Consultation Room",
         "input_label": "Enter Patient Complaints / Clinical Presentation Note:",
         "input_placeholder": "e.g., Patient age 24, showing high fever and severe chills.",
         "submit_btn": "Process & Issue Token",
+        "call_btn": "✅ Treat & Discharge Next Patient",
+        "discharge_bed_btn": "🛏️ Free Up 1 Occupied Oxygen Bed",
+        "no_patients": "🎉 No waiting patients! Triage line is fully cleared.",
         "metrics_header": "📊 Real-Time Operations Telemetry",
         "waiting": "Waiting Patients",
         "beds_headline": "🛏️ Live Bed Matrix Status",
@@ -68,7 +72,7 @@ LANG_PACK = {
         "cache_balanced": "📭 Cache balanced. Zero changes pending transmission.",
         "crypt_shield": "🔐 FHIR Interoperability Shield Active! Universally compliant encrypted payload built:",
         "hardware_title": "🛰️ IoT Sensor & ML Predictive Pipelines",
-        "hw_cam_btn": "📷 Simulate Computer Vision Waiting Room Overflow (+8 People Counted)",
+        "hw_cam_btn": "📷 Simulate Computer Vision Waiting Room Overflow (+5 People Counted)",
         "hw_geo_btn": "📍 Authenticate On-Duty Doctor via Geo-Fenced Mobile Biometrics",
         "hw_ml_btn": "🌦️ Run ML Monsoon Weather Predictive Forecast (Rain > 250mm)",
         "sim_success": "💥 Action registered successfully. System states updated dynamically.",
@@ -78,9 +82,13 @@ LANG_PACK = {
         "title": "🏥 విశాఖపట్నం జిల్లా స్మార్ట్ హెల్త్ ఎంటర్‌ప్రైజ్ హబ్",
         "subtitle": "మందుల స్టాక్, రోగుల సంఖ్య, బెడ్ల లభ్యత మరియు హాజరు యొక్క ప్రత్యక్ష IoT పర్యవేక్షణ.",
         "triage_header": "📝 రోగుల ఐటియాజ్ పర్యవేక్షణ (AI Triage)",
+        "doc_header": "👨‍⚕️ వైద్యుల చికిత్స గది (Doctor Desk)",
         "input_label": "రోగి యొక్క ఆరోగ్య సమస్యల వివరాలను నమోదు చేయండి:",
         "input_placeholder": "ఉదాహరణకు: రోగి వయస్సు 24 సంవత్సరాలు, తీవ్రమైన జ్వరం మరియు వణుకు ఉంది.",
         "submit_btn": "టోకెన్ జారీ చేయండి",
+        "call_btn": "✅ తదుపరి రోగికి చికిత్స చేసి పంపండి",
+        "discharge_bed_btn": "🛏️ ఒక ఆక్సిజన్ బెడ్‌ను ఖాళీ చేయండి",
+        "no_patients": "🎉 నిరీక్షణ జాబితా ఖాళీగా ఉంది! అందరికీ చికిత్స పూర్తయింది.",
         "metrics_header": "📊 ప్రత్యక్ష ఆరోగ్య కేంద్రం వివరాలు",
         "waiting": "వేచి ఉన్న రోగులు",
         "beds_headline": "🛏️ బెడ్ల లభ్యత మరియు స్థితి వివరాలు",
@@ -94,7 +102,7 @@ LANG_PACK = {
         "cache_balanced": "📭 క్లౌడ్ డేటా సమకాలీకరణ నిల్వ ఖాళీగా ఉంది.",
         "crypt_shield": "🔐 FHIR రక్షణ యాక్టివ్‌గా ఉంది! ఎన్‌క్రిప్ట్ చేయబడిన అంతర్జాతీయ ప్రమాణాల డేటా ప్యాకేజీ:",
         "hardware_title": "🛰️ IoT సెన్సార్ & ML ప్రిడిక్టివ్ పైప్‌లైన్స్",
-        "hw_cam_btn": "📷 కంప్యూటర్ విజన్ కెమెరా ఓవర్‌ఫ్లో పరీక్షించండి (+8 మంది వ్యక్తులు)",
+        "hw_cam_btn": "📷 కంప్యూటర్ విజన్ కెమెరా ఓవర్‌ఫ్లో పరీక్షించండి (+5 మంది వ్యక్తులు)",
         "hw_geo_btn": "📍 జియో-ఫెన్స్డ్ మొబైల్ బయోమెట్రిక్స్ ద్వారా వైద్యుడి హాజరును ధృవీకరించండి",
         "hw_ml_btn": "🌦️ ML వర్షపాత ప్రిడిక్టివ్ ఫోర్‌కాస్ట్ రన్ చేయండి (వర్షపాతం > 250mm)",
         "sim_success": "💥 చర్య విజయవంతంగా నమోదు చేయబడింది. వ్యవస్థ అప్‌డేట్ చేయబడింది.",
@@ -110,10 +118,10 @@ text = LANG_PACK[lang_code]
 st.title(text["title"])
 st.caption(text["subtitle"])
 st.markdown("---")
-
 col1, col2 = st.columns([1, 1.2])
 
 with col1:
+    # ── PATIENT INFLOW (TRIAGE) ──
     st.header(text["triage_header"])
     user_input = st.text_area(text["input_label"], placeholder=text["input_placeholder"], height=100)
     
@@ -127,7 +135,7 @@ with col1:
         cursor = conn.cursor()
         today = datetime.now().strftime('%Y-%m-%d')
         cursor.execute("SELECT COUNT(*) FROM patient_queue WHERE category = ? AND date(arrival_time) = ?", (category, today))
-        count = cursor.fetchone()[0] + 1 # Dynamic bracket unpack to protect scalar integration loops
+        count = cursor.fetchone() + 1
         token_id = f"{'EMER' if category=='Emergency' else 'MAT' if category=='Maternal' else 'GEN'}-{count:03d}"
         cursor.execute("INSERT INTO patient_queue (token_id, category, status, arrival_time) VALUES (?, ?, 'WAITING', ?)", (token_id, category, datetime.now().isoformat()))
         conn.commit()
@@ -137,11 +145,34 @@ with col1:
     if st.button(text["submit_btn"], type="primary", use_container_width=True):
         if user_input:
             assigned_route = parse_and_triage(user_input)
-            t_id = generate_token(assigned_route)
+            generate_token(assigned_route)
             st.success(f"✅ {text['route_alloc']}: **{assigned_route}** | {text['token_success']}")
+            st.rerun()
         else:
             st.warning(text["empty_warning"])
 
+    # ── PATIENT OUTFLOW: DOCTOR CLEARANCE ENGINE (REDUCES TELEMETRY) ──
+    st.markdown("---")
+    st.header(text["doc_header"])
+    if st.button(text["call_btn"], use_container_width=True):
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        # Find the oldest waiting patient currently sitting in the triage queue
+        cursor.execute("SELECT token_id FROM patient_queue WHERE status = 'WAITING' ORDER BY arrival_time ASC LIMIT 1")
+        next_patient = cursor.fetchone()
+        
+        if next_patient:
+            target_token = next_patient
+            # Update status to COMPLETED to remove them from the active waiting pool
+            cursor.execute("UPDATE patient_queue SET status = 'COMPLETED', called_time = ? WHERE token_id = ?", (datetime.now().isoformat(), target_token))
+            conn.commit()
+            st.toast(f"👨‍⚕️ Treated and Discharged: {target_token}")
+        else:
+            st.info(text["no_patients"])
+        conn.close()
+        st.rerun()
+
+    # ── IoT PERIPHERALS & ML PIPELINES ──
     st.markdown("---")
     st.markdown(f"### {text['hardware_title']}")
     
@@ -150,23 +181,19 @@ with col1:
         cursor = conn.cursor()
         current_time_str = datetime.now().isoformat()
         base_id = datetime.now().microsecond
-        for i in range(8):
+        for i in range(5):
             cursor.execute("INSERT INTO patient_queue (token_id, category, status, arrival_time) VALUES (?, 'General', 'WAITING', ?)", (f"CAM-VOL-{base_id}-{i}", current_time_str))
         conn.commit()
         conn.close()
-        st.success(text["sim_success"])
         st.rerun()
 
     if st.button(text["hw_geo_btn"], use_container_width=True):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        doc_lat, doc_lon = 17.6868, 83.2185 
-        facility_lat, facility_lon = 17.6869, 83.2184
-        if abs(doc_lat - facility_lat) <= 0.0005 and abs(doc_lon - facility_lon) <= 0.0005:
-            cursor.execute("UPDATE doctor_roster SET attendance_status = 'PRESENT' WHERE doctor_id = 'DOC-02'")
-            conn.commit()
-            st.success("📍 [BIOMETRICS LOCKED] Dr. S. Lakshmi verified within facility geofence. Shift logged.")
+        cursor.execute("UPDATE doctor_roster SET attendance_status = 'PRESENT' WHERE doctor_id = 'DOC-02'")
+        conn.commit()
         conn.close()
+        st.success(text["sim_success"])
 
     if st.button(text["hw_ml_btn"], use_container_width=True):
         conn = sqlite3.connect(DB_NAME)
@@ -174,7 +201,6 @@ with col1:
         cursor.execute("UPDATE medicine_stock SET reorder_level = 150 WHERE item_name = 'Artesunate (Malaria)'")
         conn.commit()
         conn.close()
-        st.success("🌦️ [ML PREDICTION VECTOR] High precipitation warning processed. Malaria buffer safety baseline scaled to 150 units.")
         st.rerun()
 
 with col2:
@@ -182,14 +208,16 @@ with col2:
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM patient_queue WHERE status = 'WAITING'")
-    waiting_count = cursor.fetchone()[0]
+    waiting_count = cursor.fetchone()
     cursor.execute("SELECT bed_type, total_beds, occupied_beds FROM bed_occupancy ORDER BY ROWID")
     beds = cursor.fetchall()
     cursor.execute("SELECT doctor_name, specialty, attendance_status FROM doctor_roster")
     roster = cursor.fetchall()
     conn.close()
     
+    # Live KPI Metric Card updates automatically
     st.metric(label=text["waiting"], value=f"{waiting_count}")
+    
     st.markdown(f"### {text['beds_headline']}")
     oxygen_bed_vacant = 0
     for b_type, total, occupied in beds:
@@ -200,11 +228,22 @@ with col2:
         color_tag = "🔴" if ratio <= 0.1 else "🟡" if ratio <= 0.3 else "✅"
         st.markdown(f"* **{b_type}**: {occupied}/{total} ({vacant} {text['vacant']}) ──> {color_tag} **{stress_label}**")
 
+    # BED CLEARANCE TRIGGER (REDUCES OVERLOAD)
+    if oxygen_bed_vacant <= 1:
+        if st.button(text["discharge_bed_btn"], type="secondary", use_container_width=True):
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            # De-escalate occupied bed count from 9 down to 8 to restore safety margins
+            cursor.execute("UPDATE bed_occupancy SET occupied_beds = occupied_beds - 1 WHERE bed_type = 'Oxygen Beds'")
+            conn.commit()
+            conn.close()
+            st.rerun()
+
     st.markdown("### 👨‍⚕️ Live Medical Roster Coverage")
     for name, spec, status in roster:
-        tag = "🟢" if status == "PRESENT" else "⚪"
-        st.markdown(f"* {tag} **{name}** ({spec}) ──> {status}")
+        st.markdown(f"* {'🟢' if status == 'PRESENT' else '⚪'} **{name}** ({spec}) ──> {status}")
 
+# ── AMBULANCE DIRECTION SYSTEM AUTOMATION ──
 st.markdown("---")
 st.markdown(f"### {text['ambulance']}")
 if oxygen_bed_vacant <= 1:
@@ -212,9 +251,9 @@ if oxygen_bed_vacant <= 1:
 else:
     st.success(text["amb_stable"])
 
+# ── COMPLIANCE FHIR SYNCER ──
 st.markdown("---")
 st.markdown(f"### {text['sync_header']}")
-
 if st.button(text["sync_btn"], use_container_width=True):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -223,11 +262,10 @@ if st.button(text["sync_btn"], use_container_width=True):
     conn.close()
     
     if row:
-        fhir_payload_json = InteroperabilityEngine.export_to_fhir_standard_json(row[0], row[1])
+        fhir_payload_json = InteroperabilityEngine.export_to_fhir_standard_json(row, row)
         encrypted_fhir_stream = CryptoProtocol.encrypt(fhir_payload_json)
-        
         st.info(f"{text['crypt_shield']}")
         st.code(fhir_payload_json, language="json")
-        st.warning(f"🔒 Encrypted ASCII Outbox Data Frame (Ready for Zlib Network Push): `{encrypted_fhir_stream[:120]}...`")
+        st.warning(f"🔒 Encrypted ASCII Outbox Data Frame: `{encrypted_fhir_stream[:120]}...`")
     else:
         st.info(text["cache_balanced"])
