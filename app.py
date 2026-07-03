@@ -29,8 +29,6 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS medicine_stock (item_name TEXT PRIMARY KEY, current_stock INTEGER, reorder_level INTEGER)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS bed_occupancy (bed_type TEXT PRIMARY KEY, total_beds INTEGER, occupied_beds INTEGER)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS doctor_roster (doctor_id TEXT PRIMARY KEY, doctor_name TEXT, specialty TEXT, attendance_status TEXT)''')
-    
-    # NEW DATABASE TABLE: Pharmacy Staff Registry
     cursor.execute('''CREATE TABLE IF NOT EXISTS pharma_roster (staff_id TEXT PRIMARY KEY, staff_name TEXT, shift_status TEXT)''')
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS prescriptions (
@@ -84,7 +82,10 @@ LANG_PACK = {
         "beds_headline": "🛏️ Live Bed Matrix Status",
         "vacant": "vacant", "stable": "STABLE", "high_load": "HIGH LOAD", "critical": "CRITICAL",
         "ambulance": "📢 AMBULANCE DISPATCH CONTROLLER",
+        "amb_divert": "⚠️ [DIVERTING PROTOCOL ACTIVE] Redirecting inbound oxygen emergency logistics directly to CHC Anakapalle!",
+        "amb_stable": "✅ [FACILITY UNLOCKED] Inbound transport cleared for direct entry.", # FIXED: Missing key restored
         "sync_header": "🛡️ Cryptographic Transmission & Cloud Backhaul Sync",
+        "sync_btn": "🔒 Securely Sync Anonymized FHIR Cloud Payload",
         "crypt_shield": "🔐 FHIR Interoperability Shield Active! Universally compliant encrypted payload built:",
         "cache_balanced": "📭 Cache balanced. Zero changes pending transmission.",
         "archive_header": "📁 Secure Operational Telemetry Log Archive"
@@ -110,7 +111,12 @@ LANG_PACK = {
         "beds_headline": "🛏️ బెడ్ల లభ్యత మరియు స్థితి వివరాలు",
         "vacant": "ఖాళీగా ఉన్నాయి", "stable": "తగినంత స్టాక్ ఉంది", "high_load": "రోగుల ఒత్తిడి ఎక్కువగా ఉంది", "critical": "అత్యంత ప్రమాదకరం",
         "ambulance": "📢 అంబులెన్స్ రూటింగ్ కంట్రోలర్ (Ambulance Route)",
+        "amb_divert": "⚠️ [రూటింగ్ హెచ్చరిక] ఆక్సిజన్ బెడ్ల కొరత! నాన్-క్రిటికల్ అంబులెన్స్‌లను అనకాపల్లి CHC కి మళ్లించండి.",
+        "amb_stable": "✅ [రూటింగ్ సాధారణం] ఇన్‌బౌండ్ అంబులెన్స్‌లు నేరుగా రావచ్చు.", # FIXED: Missing key restored
         "sync_header": "🛡️ సురక్షిత డేటా ఎన్‌క్రిప్షన్ మరియు క్లౌడ్ సమకాలీకరణ",
+        "sync_btn": "🔒 ఎన్‌క్రిప్టెడ్ క్లౌడ్ డేటా ప్యాకేజీని పంపండి",
+        "crypt_shield": "🔐 FHIR రక్షణ యాక్టివ్‌గా ఉంది! ఎన్‌క్రిప్ట్ చేయబడిన అంతర్జాతీయ ప్రమాణాల డేటా ప్యాకేజీ:",
+        "cache_balanced": "📭 క్లౌడ్ డేటా సమకాలీకరణ నిల్వ ఖాళీగా ఉంది.",
         "archive_header": "📁 చారిత్రక కార్యాచరణ టెలిమెట్రీ ఆర్కైవ్ (Logs)"
     }
 }
@@ -123,6 +129,7 @@ text = LANG_PACK[lang_code]
 st.title(text["title"])
 st.caption(text["subtitle"])
 st.markdown("---")
+
 col1, col2 = st.columns([1, 1.1])
 
 with col1:
@@ -136,7 +143,6 @@ with col1:
     cursor.execute("SELECT doctor_name FROM doctor_roster WHERE attendance_status = 'PRESENT'")
     gate_roster_raw = cursor.fetchall()
     
-    # NEW EXTRACTOR: Fetch live medicines to build clean option lists for clinicians
     cursor.execute("SELECT item_name FROM medicine_stock")
     inventory_items_raw = cursor.fetchall()
     conn.close()
@@ -162,7 +168,7 @@ with col1:
         
         a_hash = CryptoProtocol.hash_aadhaar(a_num)
         cursor.execute("INSERT INTO patient_queue (token_id, category, status, arrival_time, patient_aadhaar_hash, patient_name, target_doctor) VALUES (?, ?, 'WAITING', ?, ?, ?, ?)", 
-                       (token_id, category, "WAITING", datetime.now().isoformat(), a_hash, name, target_doc))
+                       (token_id, category, datetime.now().isoformat(), a_hash, name, target_doc))
         conn.commit()
         conn.close()
         return token_id
@@ -175,6 +181,7 @@ with col1:
                 fetched_legal_name = f"Guest Patient ID-{p_aadhaar[:4]}... (Demo Verified)"
                 
             assigned_route = "Maternal" if "Maternal" in chosen_kiosk_doctor else "Emergency" if re.search(r'(bite|snake|venom|fever)', user_input, re.IGNORECASE) else "General"
+            
             t_id = generate_secure_token(assigned_route, p_aadhaar, fetched_legal_name, chosen_kiosk_doctor)
             st.success(f"🔐 {text['text_success']} **{chosen_kiosk_doctor}** | ID: **{t_id}**")
             st.rerun()
@@ -194,9 +201,7 @@ with col1:
     
     if current_patient_row:
         st.info(f"👉 **Next Patient waiting for you:** {current_patient_row[1]} - Token: {current_patient_row[0]}")
-        
-        # MODIFICATION: Doctor selects prescription drugs directly from the dropdown menu list
-        selected_prescription_meds = st.multiselect(text["med_prescribe_lbl"], live_medicine_options, default=[live_medicine_options[0]])
+        selected_prescription_meds = st.multiselect(text["med_prescribe_lbl"], live_medicine_options)
         
         if st.button(text["rx_btn"], use_container_width=True):
             if selected_prescription_meds:
@@ -212,6 +217,7 @@ with col1:
                 st.rerun()
             else: st.warning("⚠️ Please select at least one medication from the active inventory list.")
     else: st.caption(f"🎉 No patients currently waiting specifically for {doc_desk_filter}.")
+
 with col2:
     st.header(text["metrics_header"])
     conn = sqlite3.connect(DB_NAME)
@@ -228,7 +234,6 @@ with col2:
     """)
     pharma_queue = cursor.fetchall()
     
-    # Fetch active pharmacists to enforce full structural accountability
     cursor.execute("SELECT staff_name FROM pharma_roster WHERE shift_status = 'ACTIVE'")
     active_pharmacists_raw = cursor.fetchall()
     
@@ -259,7 +264,6 @@ with col2:
                 conn = sqlite3.connect(DB_NAME)
                 cursor = conn.cursor()
                 
-                # Dynamic inventory deduction processing loop
                 for med_item in live_medicine_options:
                     if med_item.lower() in target_meds.lower():
                         cursor.execute("UPDATE medicine_stock SET current_stock = current_stock - 1 WHERE item_name = ?", (med_item,))
@@ -269,7 +273,6 @@ with col2:
                                (current_time_str, selected_active_pharmacist, target_token))
                 cursor.execute("UPDATE patient_queue SET status = 'DISCHARGED' WHERE token_id = ?", (target_token,))
                 
-                # Write a complete relational audit row linking both doctor and pharmacist names
                 cursor.execute("""
                     INSERT INTO facility_telemetry_logs (log_date, token_id, category, treatment_timestamp, treating_doctor, dispensing_pharmacist, aadhaar_hash_verified, dispense_status)
                     VALUES (?, ?, 'Discharged', ?, ?, ?, 'TRUE_BIOMETRIC_MATCH', 'DISPENSED')
@@ -280,7 +283,7 @@ with col2:
                 st.success(f"🎯 [BIOMETRICS MATCHED] Aadhaar verified. {selected_active_pharmacist} logged distribution successfully.")
                 st.rerun()
             else:
-                st.error("🚨 [SECURITY CRITICAL] Biometric authentication failed! Mismatch.")
+                st.error("🚨 [SECURITY CRITICAL] Biometric authentication failed! Fingerprint mismatch.")
     else:
         st.caption("ℹ️ No prescriptions currently pending distribution in the pharmacy corridor.")
 
