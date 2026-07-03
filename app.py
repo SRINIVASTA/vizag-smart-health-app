@@ -19,7 +19,6 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS doctor_roster 
         (doctor_id TEXT PRIMARY KEY, doctor_name TEXT, specialty TEXT, attendance_status TEXT)''')
     
-    # Seeding base values
     cursor.execute("INSERT OR IGNORE INTO medicine_stock VALUES ('Paracetamol 500mg', 120, 200), ('Anti-Venom Injection', 3, 10), ('Artesunate (Malaria)', 15, 50)")
     cursor.execute("INSERT OR IGNORE INTO bed_occupancy VALUES ('General Ward', 20, 14), ('Oxygen Beds', 10, 9), ('Isolation Unit', 5, 2)")
     cursor.execute("INSERT OR IGNORE INTO doctor_roster VALUES ('DOC-01', 'Dr. Ramesh Babu', 'General Physician', 'PRESENT'), ('DOC-02', 'Dr. S. Lakshmi', 'Maternal Specialist', 'ABSENT')")
@@ -38,7 +37,6 @@ class CryptoProtocol:
 class InteroperabilityEngine:
     @staticmethod
     def export_to_fhir_standard_json(patient_token: str, assigned_track: str) -> str:
-        """Converts local entries into universally compliant, anonymized FHIR Encounter JSON schema."""
         fhir_encounter = {
             "resourceType": "Encounter",
             "id": patient_token,
@@ -73,7 +71,8 @@ LANG_PACK = {
         "hw_cam_btn": "📷 Simulate Computer Vision Waiting Room Overflow (+8 People Counted)",
         "hw_geo_btn": "📍 Authenticate On-Duty Doctor via Geo-Fenced Mobile Biometrics",
         "hw_ml_btn": "🌦️ Run ML Monsoon Weather Predictive Forecast (Rain > 250mm)",
-        "sim_success": "💥 Action registered successfully. System states updated dynamically."
+        "sim_success": "💥 Action registered successfully. System states updated dynamically.",
+        "sync_header": "🛡️ Cryptographic Transmission & Cloud Backhaul Sync"
     },
     "te": {
         "title": "🏥 విశాఖపట్నం జిల్లా స్మార్ట్ హెల్త్ ఎంటర్‌ప్రైజ్ హబ్",
@@ -89,7 +88,7 @@ LANG_PACK = {
         "ambulance": "📢 అంబులెన్స్ రూటింగ్ కంట్రోలర్ (Ambulance Route)",
         "amb_divert": "⚠️ [రూటింగ్ హెచ్చరిక] ఆక్సిజన్ బెడ్ల కొరత! నాన్-క్రిటికల్ అంబులెన్స్‌లను అనకాపల్లి CHC కి మళ్లించండి.",
         "amb_stable": "✅ [రూటింగ్ సాధారణం] ఇన్‌బౌండ్ అంబులెన్స్‌లు నేరుగా రావచ్చు.",
-        "sync_btn": "🔒 ఎన్‌క్రిప్టెడ్ FHIR క్లౌడ్ డేటా ప్యాకేజీని పంపండి",
+        "sync_btn": "🔒 ఎన్‌క్రిప్టెడ్ క్లౌడ్ డేటా ప్యాకేజీని పంపండి",
         "route_alloc": "కేటాయించిన విభాగం", "token_success": "టోకెన్ విజయవంతంగా నమోదు చేయబడింది!",
         "empty_warning": "⚠️ సమాచారం ఏమీ నమోదు చేయలేదు.",
         "cache_balanced": "📭 క్లౌడ్ డేటా సమకాలీకరణ నిల్వ ఖాళీగా ఉంది.",
@@ -98,11 +97,11 @@ LANG_PACK = {
         "hw_cam_btn": "📷 కంప్యూటర్ విజన్ కెమెరా ఓవర్‌ఫ్లో పరీక్షించండి (+8 మంది వ్యక్తులు)",
         "hw_geo_btn": "📍 జియో-ఫెన్స్డ్ మొబైల్ బయోమెట్రిక్స్ ద్వారా వైద్యుడి హాజరును ధృవీకరించండి",
         "hw_ml_btn": "🌦️ ML వర్షపాత ప్రిడిక్టివ్ ఫోర్‌కాస్ట్ రన్ చేయండి (వర్షపాతం > 250mm)",
-        "sim_success": "💥 చర్య విజయవంతంగా నమోదు చేయబడింది. వ్యవస్థ అప్‌డేట్ చేయబడింది."
+        "sim_success": "💥 చర్య విజయవంతంగా నమోదు చేయబడింది. వ్యవస్థ అప్‌డేట్ చేయబడింది.",
+        "sync_header": "🛡️ సురక్షిత డేటా ఎన్‌క్రిప్షన్ మరియు క్లౌడ్ సమకాలీకరణ"
     }
 }
 
-st.set_page_config(layout="wide", page_title="Vizag Smart Health Enterprise Hub")
 st.sidebar.markdown("### 🌐 Navigation Language / భాష")
 selected_lang = st.sidebar.radio("Choose Preferred Option View:", ("English", "తెలుగు"), label_visibility="collapsed")
 lang_code = "en" if selected_lang == "English" else "te"
@@ -115,7 +114,6 @@ st.markdown("---")
 col1, col2 = st.columns([1, 1.2])
 
 with col1:
-    # ── ADVANCED CORE A: PATIENT INGESTION ──
     st.header(text["triage_header"])
     user_input = st.text_area(text["input_label"], placeholder=text["input_placeholder"], height=100)
     
@@ -129,7 +127,7 @@ with col1:
         cursor = conn.cursor()
         today = datetime.now().strftime('%Y-%m-%d')
         cursor.execute("SELECT COUNT(*) FROM patient_queue WHERE category = ? AND date(arrival_time) = ?", (category, today))
-        count = cursor.fetchone()[0] + 1
+        count = cursor.fetchone()[0] + 1 # Dynamic bracket unpack to protect scalar integration loops
         token_id = f"{'EMER' if category=='Emergency' else 'MAT' if category=='Maternal' else 'GEN'}-{count:03d}"
         cursor.execute("INSERT INTO patient_queue (token_id, category, status, arrival_time) VALUES (?, ?, 'WAITING', ?)", (token_id, category, datetime.now().isoformat()))
         conn.commit()
@@ -144,11 +142,9 @@ with col1:
         else:
             st.warning(text["empty_warning"])
 
-    # ── ADVANCED CORE B: HARDWARE INTERFACES & MACHINE LEARNING ──
     st.markdown("---")
     st.markdown(f"### {text['hardware_title']}")
     
-    # 1. Computer Vision Waitlist Processing Node
     if st.button(text["hw_cam_btn"], use_container_width=True):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
@@ -161,11 +157,9 @@ with col1:
         st.success(text["sim_success"])
         st.rerun()
 
-    # 2. Geo-Fenced Mobile Biometric Staff Authentication Tracker
     if st.button(text["hw_geo_btn"], use_container_width=True):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        # Simulating matching mobile coordinates (Within 50m operating radius check)
         doc_lat, doc_lon = 17.6868, 83.2185 
         facility_lat, facility_lon = 17.6869, 83.2184
         if abs(doc_lat - facility_lat) <= 0.0005 and abs(doc_lon - facility_lon) <= 0.0005:
@@ -174,11 +168,9 @@ with col1:
             st.success("📍 [BIOMETRICS LOCKED] Dr. S. Lakshmi verified within facility geofence. Shift logged.")
         conn.close()
 
-    # 3. Machine Learning Monsoon Weather Predictive Forecast Override
     if st.button(text["hw_ml_btn"], use_container_width=True):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        # High precipitation forecast dynamically weights malaria safety inventory limits to 3x
         cursor.execute("UPDATE medicine_stock SET reorder_level = 150 WHERE item_name = 'Artesunate (Malaria)'")
         conn.commit()
         conn.close()
@@ -198,7 +190,6 @@ with col2:
     conn.close()
     
     st.metric(label=text["waiting"], value=f"{waiting_count}")
-    
     st.markdown(f"### {text['beds_headline']}")
     oxygen_bed_vacant = 0
     for b_type, total, occupied in beds:
@@ -209,7 +200,6 @@ with col2:
         color_tag = "🔴" if ratio <= 0.1 else "🟡" if ratio <= 0.3 else "✅"
         st.markdown(f"* **{b_type}**: {occupied}/{total} ({vacant} {text['vacant']}) ──> {color_tag} **{stress_label}**")
 
-    # Staffing Matrix Viewer
     st.markdown("### 👨‍⚕️ Live Medical Roster Coverage")
     for name, spec, status in roster:
         tag = "🟢" if status == "PRESENT" else "⚪"
@@ -222,7 +212,6 @@ if oxygen_bed_vacant <= 1:
 else:
     st.success(text["amb_stable"])
 
-# ── ADVANCED CORE C: ABDM COMPLIANCE FHIR SYNCER ──
 st.markdown("---")
 st.markdown(f"### {text['sync_header']}")
 
@@ -234,9 +223,7 @@ if st.button(text["sync_btn"], use_container_width=True):
     conn.close()
     
     if row:
-        # 1. Compile universally standardized FHIR standard document scheme
         fhir_payload_json = InteroperabilityEngine.export_to_fhir_standard_json(row[0], row[1])
-        # 2. Obfuscate and seal metadata stream before cloud backhaul transport
         encrypted_fhir_stream = CryptoProtocol.encrypt(fhir_payload_json)
         
         st.info(f"{text['crypt_shield']}")
