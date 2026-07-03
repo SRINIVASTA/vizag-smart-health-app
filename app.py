@@ -54,7 +54,7 @@ def init_db():
         log_id INTEGER PRIMARY KEY AUTOINCREMENT, log_date TEXT, token_id TEXT, patient_name TEXT, chief_complaint TEXT,
         detailed_medicines_issued TEXT, total_pills_dispensed_count INTEGER, treating_doctor TEXT, dispensing_pharmacist TEXT, patient_disposition TEXT)''')
     
-    # Seed multi-role catalog parameters safely
+    # Seed parameters safely
     cursor.execute("INSERT OR IGNORE INTO medicine_stock VALUES ('Paracetamol 500mg', 1200, 500, 'GEN'), ('Anti-Venom Injection', 30, 10, 'GEN'), ('Artesunate (Malaria)', 150, 50, 'GEN'), ('Iron-Folic Acid Supplement', 500, 200, 'MAT'), ('Oxytocin Injection', 40, 15, 'MAT')")
     cursor.execute("INSERT OR IGNORE INTO bed_occupancy VALUES ('General Ward', 20, 14), ('Oxygen Beds', 10, 9), ('Isolation Unit', 5, 2)")
     cursor.execute("INSERT OR IGNORE INTO doctor_roster VALUES ('DOC-01', 'Dr. Ramesh Babu', 'General Physician', 'PRESENT', 'GEN'), ('DOC-02', 'Dr. S. Lakshmi', 'Maternal Specialist', 'PRESENT', 'MAT')")
@@ -93,6 +93,7 @@ LANG_PACK = {
         "text_success": "Aadhaar verified! Token generated with matching prefix designation:",
         "rx_btn": "✍️ Authorize Prescription & Route to Pharmacy",
         "dispense_btn": "🎯 Confirm Physical Handout & Log Final Dispense",
+        "discharge_bed_btn": "🛏️ Free Up 1 Occupied Oxygen Bed",
         "metrics_header": "📊 Real-Time Operations Telemetry",
         "waiting": "Waiting Patients",
         "mod_count_lbl": "Active Catalog Items (Live Directory)",
@@ -125,6 +126,7 @@ LANG_PACK = {
         "text_success": "ఆధార్ వెరిఫై అయింది! కేటాయించబడిన టోకెన్ ఐడి:",
         "rx_btn": "✍️ ప్రిస్క్రిప్షన్ జారీ చేసి ఫార్మసీకి పంపండి",
         "dispense_btn": "🎯 మందుల పంపిణీని నిర్ధారించి రికార్డ్ చేయండి",
+        "discharge_bed_btn": "🛏️ ఒక ఆక్సిజన్ బెడ్‌ను ఖాళీ చేయండి", # FIXED: Missing Telugu dictionary token restored
         "metrics_header": "📊 ప్రత్యక్ష ఆరోగ్య కేంద్రం వివరాలు",
         "waiting": "వేచి ఉన్న రోగులు",
         "mod_count_lbl": "అందుబాటులో ఉన్న మొత్తం మందుల రకాలు (Live Catalog)",
@@ -136,7 +138,7 @@ LANG_PACK = {
         "sync_header": "🛡️ సురక్షిత డేటా ఎన్‌క్రిప్షన్ మరియు క్లౌడ్ సమకాలీకరణ",
         "sync_btn": "🔒 ఎన్‌క్రిప్టెడ్ క్లౌడ్ డేటా ప్యాకేజీని పంపండి",
         "crypt_shield": "🔐 FHIR రక్షణ యాక్టివ్‌గా ఉంది! ఎన్‌క్రిప్ట్ చేయబడిన అంతర్జాతీయ ప్రమాణాల డేటా ప్యాకేజీ:",
-        "cache_balanced": "📭 క్లౌడ్ డేటా సమకాలీకరణ నిల్వ ఖาళీగా ఉంది.",
+        "cache_balanced": "📭 క్లౌడ్ డేటా సమకాలీకరణ నిల్వ ఖాళీగా ఉంది.",
         "archive_header": "📁 సమగ్ర కార్యాచరణ టెలిమెట్రీ ఆర్కైవ్ నివేదికలు (Detailed Logs)",
         "csv_btn": "📥 రికార్డుల సిఎస్వి (CSV) ఫైల్‌ను డౌన్‌లోడ్ చేసుకోండి"
     }
