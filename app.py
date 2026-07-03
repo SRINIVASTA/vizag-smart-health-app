@@ -14,7 +14,7 @@ def init_db():
     
     # SELF-HEALING DATABASE MIGRATION ENGINE
     try:
-        cursor.execute("SELECT chief_complaint, medicines_issued_count FROM facility_telemetry_logs LIMIT 1")
+        cursor.execute("SELECT unit_dosages_prescribed FROM prescriptions LIMIT 1")
     except sqlite3.OperationalError:
         cursor.execute("DROP TABLE IF EXISTS patient_queue")
         cursor.execute("DROP TABLE IF EXISTS prescriptions")
@@ -30,25 +30,33 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS doctor_roster (doctor_id TEXT PRIMARY KEY, doctor_name TEXT, specialty TEXT, attendance_status TEXT)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS pharma_roster (staff_id TEXT PRIMARY KEY, staff_name TEXT, shift_status TEXT)''')
     
+    # HARDENED PRESCRIPTION SCHEMA: Tracks exact medication item list and matching dosage quantities explicitly
     cursor.execute('''CREATE TABLE IF NOT EXISTS prescriptions (
-        prescription_id INTEGER PRIMARY KEY AUTOINCREMENT, token_id TEXT, aadhaar_hash TEXT, prescribed_meds TEXT,
-        doctor_name TEXT, dispense_status TEXT DEFAULT 'PENDING', pharma_verification_timestamp TEXT, dispensing_pharmacist TEXT)''')
+        prescription_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+        token_id TEXT, 
+        aadhaar_hash TEXT, 
+        prescribed_meds TEXT, 
+        unit_dosages_prescribed TEXT, -- Stores JSON string of specific medicine counts (e.g. Paracetamol: 10)
+        doctor_name TEXT, 
+        dispense_status TEXT DEFAULT 'PENDING', 
+        pharma_verification_timestamp TEXT, 
+        dispensing_pharmacist TEXT)''')
     
-    # Granular Audit Schema (Preserves Legal Names, Aadhaar Hashes, Reasons, and Issued Medicine Quantities)
+    # GRANULAR AUDIT SCHEMA: Preserves exact pill counts delivered by the pharmacy technician
     cursor.execute('''CREATE TABLE IF NOT EXISTS facility_telemetry_logs (
         log_id INTEGER PRIMARY KEY AUTOINCREMENT, 
         log_date TEXT, 
         token_id TEXT, 
-        patient_name TEXT,
+        patient_name TEXT, 
         aadhaar_hash_verified TEXT,
-        chief_complaint TEXT,
-        medicines_issued TEXT,
-        medicines_issued_count INTEGER,
+        chief_complaint TEXT, 
+        detailed_medicines_issued TEXT, -- Saves clear breakdown string (e.g., Paracetamol x10, Artesunate x6)
+        total_pills_dispensed_count INTEGER, 
         treating_doctor TEXT, 
         dispensing_pharmacist TEXT, 
         dispense_status TEXT)''')
     
-    cursor.execute("INSERT OR IGNORE INTO medicine_stock VALUES ('Paracetamol 500mg', 120, 200), ('Anti-Venom Injection', 3, 10), ('Artesunate (Malaria)', 15, 50)")
+    cursor.execute("INSERT OR IGNORE INTO medicine_stock VALUES ('Paracetamol 500mg', 1200, 500), ('Anti-Venom Injection', 30, 10), ('Artesunate (Malaria)', 150, 50)")
     cursor.execute("INSERT OR IGNORE INTO bed_occupancy VALUES ('General Ward', 20, 14), ('Oxygen Beds', 10, 9), ('Isolation Unit', 5, 2)")
     cursor.execute("INSERT OR IGNORE INTO doctor_roster VALUES ('DOC-01', 'Dr. Ramesh Babu', 'General Physician', 'PRESENT'), ('DOC-02', 'Dr. S. Lakshmi', 'Maternal Specialist', 'PRESENT')")
     cursor.execute("INSERT OR IGNORE INTO pharma_roster VALUES ('PHARM-01', 'M. Srinivasa Rao (Pharma In-Charge)', 'ACTIVE'), ('PHARM-02', 'K. Durga Devi (Junior Pharmacist)', 'ACTIVE')")
@@ -70,10 +78,10 @@ class CryptoProtocol:
 LANG_PACK = {
     "en": {
         "title": "🏥 Visakhapatnam Smart Health Enterprise Hub",
-        "subtitle": "Biometric Ingestion Gateway & Granular Operational Telemetry Archive Engine.",
+        "subtitle": "Biometric Ingestion Gateway & Granular Unit-Dose Stock Tracking Engine.",
         "triage_header": "🛰️ Entrance Kiosk: Autonomous Aadhaar Biometric Scan",
         "doc_header": "👨‍⚕️ Doctor Consultation Room & Prescription Desk",
-        "pharma_header": "💊 Direct-Pull Pharmacy Dispensing Desk",
+        "pharma_header": "💊 Direct-Pull Unit-Dose Pharmacy Dispensing Desk",
         "aadhaar_label": "Swipe Aadhaar Card / Place Thumb on Scanner (Simulate 12-Digit Entry):",
         "input_label": "Primary Chief Complaint / Clinical Reason for Visit:",
         "input_placeholder": "e.g., Patient showing high fever and severe chills.",
@@ -84,9 +92,10 @@ LANG_PACK = {
         "submit_btn": "🔗 Ingest UIDAI Biometrics & Issue Routed Token",
         "text_success": "Aadhaar verified via UIDAI! Profile routed to:",
         "rx_btn": "✍️ Issue Prescription & Call Next",
-        "dispense_btn": "🎯 Instant Dispense (Verified via Gate Scan Link)",
+        "dispense_btn": "🎯 Confirm Physical Inventory Handout & Log Final Dispense",
         "metrics_header": "📊 Real-Time Operations Telemetry",
         "waiting": "Waiting Patients",
+        "med_count_lbl": "Active Catalog Items (Live Directory)",
         "beds_headline": "🛏️ Live Bed Matrix Status",
         "vacant": "vacant", "stable": "STABLE", "high_load": "HIGH LOAD", "critical": "CRITICAL",
         "ambulance": "📢 AMBULANCE DISPATCH CONTROLLER",
@@ -101,7 +110,7 @@ LANG_PACK = {
     },
     "te": {
         "title": "🏥 విశాఖపట్నం జిల్లా స్మార్ట్ హెల్త్ ఎంటర్‌ప్రైజ్ హబ్",
-        "subtitle": "ఆటోమేటిక్ ఆధార్ రిజిస్ట్రేషన్ మరియు సమగ్ర నివేదికల పంపిణీ వ్యవస్థ.",
+        "subtitle": "ఆటోమేటిక్ ఆధార్ రిజిస్ట్రేషన్ మరియు సమగ్ర మందుల పంపిణీ నియంత్రణ వ్యవస్థ.",
         "triage_header": "🛰️ ప్రవేశ ద్వారం: ఆటోమేటిక్ ఆధార్ బయోమెట్రిక్ స్కాన్ కౌంటర్",
         "doc_header": "👨‍⚕️ వైద్యుల చికిత్స మరియు మందుల ప్రిస్క్రిప్షన్ గది",
         "pharma_header": "💊 ఫార్మసీ మందుల పంపిణీ కౌంటర్ (Pharma Desk)",
@@ -114,9 +123,10 @@ LANG_PACK = {
         "submit_btn": "🔗 ఆధార్ బయోమెట్రిక్స్ సేకరించి టోకెన్ ఇవ్వండి",
         "text_success": "ఆధార్ బయోమెట్రిక్స్ విజయవంతంగా సేకరించబడ్డాయి! చికిత్స విభాగం:",
         "rx_btn": "✍️ ప్రిస్క్రిప్షన్ జారీ చేయండి",
-        "dispense_btn": "🎯 మందులను పంపిణీ చేయండి (గేట్ స్కాన్ ఆధారంగా)",
+        "dispense_btn": "🎯 మందుల పంపిణీని నిర్ధారించి రికార్డ్ చేయండి",
         "metrics_header": "📊 ప్రత్యక్ష ఆరోగ్య కేంద్రం వివరాలు",
         "waiting": "వేచి ఉన్న రోగులు",
+        "med_count_lbl": "అందుబాటులో ఉన్న మొత్తం మందుల రకాలు (Live Catalog)",
         "beds_headline": "🛏️ బెడ్ల లభ్యత మరియు స్థితి వివరాలు",
         "vacant": "ఖాళీగా ఉన్నాయి", "stable": "తగినంత స్టాక్ ఉంది", "high_load": "రోగుల ఒత్తిడి ఎక్కువగా ఉంది", "critical": "అత్యంత ప్రమాదకరం",
         "ambulance": "📢 అంబులెన్స్ రూటింగ్ కంట్రోలర్ (Ambulance Route)",
@@ -155,8 +165,8 @@ with col1:
     inventory_items_raw = cursor.fetchall()
     conn.close()
     
-    gate_doctor_options = [row[0] for row in gate_roster_raw] if gate_roster_raw else ["General On-Call Officer"]
-    live_medicine_options = [row[0] for row in inventory_items_raw] if inventory_items_raw else ["Paracetamol 500mg"]
+    gate_doctor_options = [row for row in gate_roster_raw] if gate_roster_raw else ["General On-Call Officer"]
+    live_medicine_options = [row for row in inventory_items_raw] if inventory_items_raw else ["Paracetamol 500mg"]
     chosen_kiosk_doctor = st.selectbox(text["gate_doc_select"], gate_doctor_options)
 
     UIDAI_HARDWARE_DECRYPTION_DATABASE = {
@@ -170,7 +180,7 @@ with col1:
         cursor = conn.cursor()
         today = datetime.now().strftime('%Y-%m-%d')
         cursor.execute("SELECT COUNT(*) FROM patient_queue WHERE category = ? AND date(arrival_time) = ?", (category, today))
-        count = cursor.fetchone()[0] + 1
+        count = cursor.fetchone() + 1
         prefix = {"Emergency": "EMER", "Maternal": "MAT", "General": "GEN"}.get(category, "GEN")
         token_id = f"{prefix}-{count:03d}"
         
@@ -185,8 +195,7 @@ with col1:
         if len(p_aadhaar) == 12 and user_input:
             if p_aadhaar in UIDAI_HARDWARE_DECRYPTION_DATABASE:
                 fetched_legal_name = UIDAI_HARDWARE_DECRYPTION_DATABASE[p_aadhaar]
-            else:
-                fetched_legal_name = f"Guest Patient ID-{p_aadhaar[:4]}... (Demo Verified)"
+            else: fetched_legal_name = f"Guest Patient ID-{p_aadhaar[:4]}... (Demo Verified)"
                 
             assigned_route = "Maternal" if "Maternal" in chosen_kiosk_doctor else "Emergency" if re.search(r'(bite|snake|venom|fever)', user_input, re.IGNORECASE) else "General"
             t_id = generate_secure_token(assigned_route, p_aadhaar, fetched_legal_name, chosen_kiosk_doctor, user_input)
@@ -207,18 +216,31 @@ with col1:
     conn.close()
     
     if current_patient_row:
-        st.info(f"👉 **Next Patient:** {current_patient_row[1]} | Token: {current_patient_row[0]}")
-        st.caption(f"📋 **Reason for Visit Recorded at Gate:** {current_patient_row[2]}")
+        st.info(f"👉 **Next Patient:** {current_patient_row} | Token: {current_patient_row}")
+        st.caption(f"📋 **Reason for Visit Recorded at Gate:** {current_patient_row}")
+        
+        # 1. Doctor selects multiple medications from the catalog list
         selected_prescription_meds = st.multiselect(text["med_prescribe_lbl"], live_medicine_options)
+        
+        # 2. ADVANCED INTERFACE CORE: Dynamically map separate numeric dosage input boxes for EACH selected item
+        dosage_allocation_map = {}
+        if selected_prescription_meds:
+            st.markdown("##### 💊 Set Precise Unit Counts / Pill Volumes:")
+            for medicine in selected_prescription_meds:
+                # Creates an isolated interactive number picker per item
+                quantity_pill_count = st.number_input(f"Count for {medicine}:", min_value=1, max_value=100, value=10, key=f"dose_{medicine}")
+                dosage_allocation_map[medicine] = int(quantity_pill_count)
         
         if st.button(text["rx_btn"], use_container_width=True):
             if selected_prescription_meds:
                 med_string_format = ", ".join(selected_prescription_meds)
+                json_dosage_string = json.dumps(dosage_allocation_map) # Serialize pill volumes to string
+                
                 conn = sqlite3.connect(DB_NAME)
                 cursor = conn.cursor()
-                cursor.execute("INSERT INTO prescriptions (token_id, aadhaar_hash, prescribed_meds, doctor_name) VALUES (?, (SELECT patient_aadhaar_hash FROM patient_queue WHERE token_id=?), ?, ?)",
-                               (current_patient_row[0], current_patient_row[0], med_string_format, doc_desk_filter))
-                cursor.execute("UPDATE patient_queue SET status = 'IN_PHARMACY', called_time = ? WHERE token_id = ?", (datetime.now().isoformat(), current_patient_row[0]))
+                cursor.execute("INSERT INTO prescriptions (token_id, aadhaar_hash, prescribed_meds, unit_dosages_prescribed, doctor_name) VALUES (?, (SELECT patient_aadhaar_hash FROM patient_queue WHERE token_id=?), ?, ?, ?)",
+                               (current_patient_row, current_patient_row, med_string_format, json_dosage_string, doc_desk_filter))
+                cursor.execute("UPDATE patient_queue SET status = 'IN_PHARMACY', called_time = ? WHERE token_id = ?", (datetime.now().isoformat(), current_patient_row))
                 conn.commit()
                 conn.close()
                 st.success("📝 Prescription signed and securely routed to pharmacy desk.")
@@ -230,12 +252,15 @@ with col2:
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM patient_queue WHERE status = 'WAITING'")
-    waiting_count = cursor.fetchone()[0]
+    waiting_count = cursor.fetchone()
+    cursor.execute("SELECT COUNT(*) FROM medicine_stock")
+    total_registered_medicines = cursor.fetchone()
     cursor.execute("SELECT bed_type, total_beds, occupied_beds FROM bed_occupancy ORDER BY ROWID")
     beds = cursor.fetchall()
     
+    # Extract structural patient fields including the serialized dosage json strings
     cursor.execute("""
-        SELECT p.token_id, q.patient_name, p.prescribed_meds, p.doctor_name, p.aadhaar_hash, q.chief_complaint 
+        SELECT p.token_id, q.patient_name, p.prescribed_meds, p.unit_dosages_prescribed, p.doctor_name, p.aadhaar_hash, q.chief_complaint 
         FROM prescriptions p JOIN patient_queue q ON p.token_id = q.token_id 
         WHERE p.dispense_status = 'PENDING'
     """)
@@ -245,58 +270,69 @@ with col2:
     
     # Read expanded columns to render the granular historical tracking download grid view
     cursor.execute("""
-        SELECT log_date, token_id, patient_name, aadhaar_hash_verified, chief_complaint, medicines_issued, medicines_issued_count, treating_doctor, dispensing_pharmacist 
+        SELECT log_date, token_id, patient_name, chief_complaint, detailed_medicines_issued, total_pills_dispensed_count, treating_doctor, dispensing_pharmacist 
         FROM facility_telemetry_logs ORDER BY log_id DESC LIMIT 10
     """)
     historical_logs_raw = cursor.fetchall()
     conn.close()
     
-    st.metric(label=text["waiting"], value=f"{waiting_count} Patients Active")
+    # Display Dual Live Telemetry Status Metrics Side-By-Side
+    meta_col1, meta_col2 = st.columns(2)
+    with meta_col1: st.metric(label=text["waiting"], value=f"{waiting_count} Patients")
+    with meta_col2: st.metric(label=text["mod_count_lbl"], value=f"{total_registered_medicines} Types")
     
     # ── TOUCHPOINT 3: DIRECT-PULL SINGLE-CLICK PHARMACY VERIFICATION ──
     st.markdown("---")
     st.header(text["pharma_header"])
     
-    pharmacist_options = [row[0] for row in active_pharmacists_raw] if active_pharmacists_raw else ["Default Pharmacist"]
+    pharmacist_options = [row for row in active_pharmacists_raw] if active_pharmacists_raw else ["Default Pharmacist"]
     selected_active_pharmacist = st.selectbox(text["pharma_select_lbl"], pharmacist_options)
     
     if pharma_queue:
-        pharma_options = [f"{row[0]} - {row[1]}" for row in pharma_queue]
+        pharma_options = [f"{row} - {row}" for row in pharma_queue]
         selected_pharma_patient = st.selectbox("Select Patient Token at Counter:", pharma_options)
         
-        if st.button(text["dispense_btn"], type="primary", use_container_width=True):
-            selected_idx = pharma_options.index(selected_pharma_patient)
-            target_token, target_name, target_meds, target_doc, target_hash, target_complaint = pharma_queue[selected_idx]
+        # Extract metadata metrics for the current selection row
+        selected_idx = pharma_options.index(selected_pharma_patient)
+        target_token, target_name, target_meds, target_json_doses, target_doc, target_hash, target_complaint = pharma_queue[selected_idx]
+        
+        # Display the exact prescription count requests directly on the pharmacist's panel view screen
+        st.markdown("##### 📋 Verified Prescription Orders Items Pull Checklist:")
+        parsed_dosages = json.loads(target_json_doses) if target_json_doses else {}
+        for medicine_name, pill_volume in parsed_dosages.items():
+            st.info(f"🔹 **{medicine_name}** ──> Handout Volume Count Requirement: **{pill_volume} units**")
             
+        if st.button(text["dispense_btn"], type="primary", use_container_width=True):
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
             
-            issued_meds_list = []
-            for med_item in live_medicine_options:
-                if med_item.lower() in target_meds.lower():
-                    cursor.execute("UPDATE medicine_stock SET current_stock = current_stock - 1 WHERE item_name = ?", (med_item,))
-                    issued_meds_list.append(med_item)
+            # Deduct the exact pill count volume numbers directly from stock records fields
+            total_dispensed_pills_sum = 0
+            breakdown_log_strings_list = []
             
-            meds_issued_count = len(issued_meds_list)
-            meds_issued_str = ", ".join(issued_meds_list) if issued_meds_list else "None"
+            for medicine_name, pill_volume in parsed_dosages.items():
+                cursor.execute("UPDATE medicine_stock SET current_stock = current_stock - ? WHERE item_name = ?", (pill_volume, medicine_name))
+                total_dispensed_pills_sum += pill_volume
+                breakdown_log_strings_list.append(f"{medicine_name} (-{pill_volume})")
+            
+            detailed_issued_meds_summary_str = ", ".join(breakdown_log_strings_list) if breakdown_log_strings_list else "None"
             current_time_str = datetime.now().isoformat()
             
             cursor.execute("UPDATE prescriptions SET dispense_status = 'DISPENSED', pharma_verification_timestamp = ?, dispensing_pharmacist = ? WHERE token_id = ?", 
                            (current_time_str, selected_active_pharmacist, target_token))
             cursor.execute("UPDATE patient_queue SET status = 'DISCHARGED' WHERE token_id = ?", (target_token,))
             
-            # GRANULAR TELEMETRY SAVE ACTION
+            # GRANULAR TELEMETRY SAVE ACTION WITH QUANTITIES AND EXACT PILL COUNTS LOCKDOWN
             cursor.execute("""
-                INSERT INTO facility_telemetry_logs (log_date, token_id, patient_name, aadhaar_hash_verified, chief_complaint, medicines_issued, medicines_issued_count, treating_doctor, dispensing_pharmacist, dispense_status)
+                INSERT INTO facility_telemetry_logs (log_date, token_id, patient_name, aadhaar_hash_verified, chief_complaint, detailed_medicines_issued, total_pills_dispensed_count, treating_doctor, dispensing_pharmacist, dispense_status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'DISPENSED')
-            """, (datetime.now().strftime('%Y-%m-%d'), target_token, target_name, target_hash, target_complaint, meds_issued_str, meds_issued_count, target_doc, selected_active_pharmacist))
+            """, (datetime.now().strftime('%Y-%m-%d'), target_token, target_name, target_hash, target_complaint, detailed_issued_meds_summary_str, total_dispensed_pills_sum, target_doc, selected_active_pharmacist))
             
             conn.commit()
             conn.close()
-            st.success(f"🎯 [DISPENSE SUCCESS] Medications logged. Transaction authorized by {selected_active_pharmacist}.")
+            st.success(f"🎯 [DISPENSE SUCCESS] Verified Handout compiled. Total individual pills distributed: {total_dispensed_pills_sum}.")
             st.rerun()
-    else:
-        st.caption("ℹ️ No prescriptions currently pending distribution in the pharmacy corridor.")
+    else: st.caption("ℹ️ No prescriptions currently pending distribution in the pharmacy corridor.")
 
     # Bed Infrastructure Status Grid
     st.markdown(f"### {text['beds_headline']}")
@@ -315,37 +351,31 @@ if oxygen_bed_vacant <= 1: st.error(text["amb_divert"])
 else: st.success(text["amb_stable"])
 
 # =====================================================================
-# FEATURE WORKSPACE: INTEGRATED OPERATIONAL TELEMETRY LOGS & CONSOLE DOWNLOAD
+# DYNAMIC GRANULAR UNIT-DOSE LOG ARCHIVE VIEW & EXPORTER
 # =====================================================================
 st.markdown("---")
 st.markdown(f"### {text['archive_header']}")
 if historical_logs_raw:
-    # 1. Provide an on-screen preview grid of the data row attributes
     st.dataframe(
         historical_logs_raw, 
         column_config={
-            "0": "Date", "1": "Token ID", "2": "Patient Name", "3": "Aadhaar Hash", 
-            "4": "Chief Complaint Reason", "5": "Medicines Issued", "6": "Quantity Count", 
-            "7": "Doctor", "8": "Pharmacist"
+            "0": "Date", "1": "Token ID", "2": "Patient Name", "3": "Chief Complaint Reason", 
+            "4": "Detailed Medicine Handout Breakdown", "5": "Total Pill Count Issued", 
+            "6": "Doctor Name", "7": "Dispensing Pharmacist"
         }, 
         use_container_width=True
     )
     
-    # 2. Compile data array into a clean spreadsheet memory stream layout for direct browser downloads
-    csv_buffer = "Log_Date,Token_ID,Patient_Name,Aadhaar_Hash,Chief_Complaint,Medicines_Issued,Quantity_Count,Attending_Doctor,Pharmacist\n"
+    csv_buffer = "Log_Date,Token_ID,Patient_Name,Chief_Complaint,Detailed_Medicine_Breakdown,Total_Pills_Issued,Attending_Doctor,Pharmacist\n"
     for r in historical_logs_raw:
-        csv_buffer += f'"{r[0]}","{r[1]}","{r[2]}","{r[3]}","{r[4]}","{r[5]}",{r[6]},"{r[7]}","{r[8]}"\n'
+        csv_buffer += f'"{r}","{r}","{r}","{r}","{r}",{r},"{r}","{r}"\n'
         
-    # 3. Interactive Download Trigger Anchor
     st.download_button(
-        label=text["csv_btn"], 
-        data=csv_buffer, 
-        file_name=f"vizag_health_granular_telemetry_{datetime.now().strftime('%Y-%m-%d')}.csv", 
-        mime="text/csv", 
-        use_container_width=True
+        label=text["csv_btn"], data=csv_buffer, 
+        file_name=f"vizag_health_granular_unit_doses_{datetime.now().strftime('%Y-%m-%d')}.csv", 
+        mime="text/csv", use_container_width=True
     )
-else:
-    st.caption("ℹ️ Waiting for verified biometric transactions to populate the spreadsheet archive download desk.")
+else: st.caption("ℹ️ Waiting for verified biometric transactions to populate the spreadsheet archive download desk.")
 
 # Compliance Outbox FHIR Data Packer
 st.markdown("---")
@@ -357,7 +387,7 @@ if st.button(text["sync_btn"], use_container_width=True):
     sync_row = cursor.fetchone()
     conn.close()
     if sync_row:
-        fhir_payload_json = json.dumps({"resourceType": "Encounter", "id": sync_row[0], "status": "finished", "serviceType": {"display": sync_row[1]}, "participant": [{"individual": {"display": sync_row[2]}}, {"individual": {"display": sync_row[3]}}]}, indent=2)
+        fhir_payload_json = json.dumps({"resourceType": "Encounter", "id": sync_row, "status": "finished", "serviceType": {"display": sync_row}, "participant": [{"individual": {"display": sync_row}}, {"individual": {"display": sync_row}}]}, indent=2)
         st.info(f"{text['crypt_shield']}")
         st.code(fhir_payload_json, language="json")
-    else: st.info(text["cache_balanced"])
+    else: st.info("📭 Cache balanced. Zero changes pending transmission.")
