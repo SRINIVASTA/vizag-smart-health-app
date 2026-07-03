@@ -3,7 +3,7 @@ import sqlite3
 import base64
 import re
 import json
-import csv
+import hashlib
 from datetime import datetime
 
 DB_NAME = "web_smart_health.db"
@@ -11,8 +11,16 @@ DB_NAME = "web_smart_health.db"
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS patient_queue 
-        (token_id TEXT PRIMARY KEY, category TEXT, status TEXT, arrival_time TIMESTAMP, called_time TIMESTAMP)''')
+    # Core Operations Tables
+    cursor.execute('''CREATE TABLE IF NOT EXISTS patient_queue (
+        token_id TEXT PRIMARY KEY, 
+        category TEXT, 
+        status TEXT, 
+        arrival_time TIMESTAMP, 
+        called_time TIMESTAMP,
+        patient_aadhaar_hash TEXT,
+        patient_name TEXT
+    )''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS medicine_stock 
         (item_name TEXT PRIMARY KEY, current_stock INTEGER, reorder_level INTEGER)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS bed_occupancy 
@@ -20,7 +28,18 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS doctor_roster 
         (doctor_id TEXT PRIMARY KEY, doctor_name TEXT, specialty TEXT, attendance_status TEXT)''')
     
-    # HARDENED LOGS TABLE: Explicitly records treating doctor name alongside data metrics
+    # Prescription & Pharma Verification Table
+    cursor.execute('''CREATE TABLE IF NOT EXISTS prescriptions (
+        prescription_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        token_id TEXT,
+        aadhaar_hash TEXT,
+        prescribed_meds TEXT,
+        doctor_name TEXT,
+        dispense_status TEXT DEFAULT 'PENDING',
+        pharma_verification_timestamp TEXT
+    )''')
+    
+    # Historical Telemetry Audit Ledger
     cursor.execute('''CREATE TABLE IF NOT EXISTS facility_telemetry_logs (
         log_id INTEGER PRIMARY KEY AUTOINCREMENT,
         log_date TEXT,
@@ -28,7 +47,8 @@ def init_db():
         category TEXT,
         treatment_timestamp TEXT,
         treating_doctor TEXT,
-        active_waiting_at_discharge INTEGER
+        aadhaar_hash_verified TEXT,
+        dispense_status TEXT
     )''')
     
     cursor.execute("INSERT OR IGNORE INTO medicine_stock VALUES ('Paracetamol 500mg', 120, 200), ('Anti-Venom Injection', 3, 10), ('Artesunate (Malaria)', 15, 50)")
@@ -45,90 +65,56 @@ class CryptoProtocol:
     def encrypt(data_str: str) -> str:
         encrypted_bytes = bytes([ord(data_str[i]) ^ CryptoProtocol._KEY[i % len(CryptoProtocol._KEY)] for i in range(len(data_str))])
         return base64.b64encode(encrypted_bytes).decode('utf-8')
-
-class InteroperabilityEngine:
+    
     @staticmethod
-    def export_to_fhir_standard_json(patient_token: str, assigned_track: str, doctor_name: str) -> str:
-        fhir_encounter = {
-            "resourceType": "Encounter",
-            "id": patient_token,
-            "status": "finished",
-            "class": {"system": "http://hl7.org", "code": "AMB", "display": "ambulatory"},
-            "serviceType": {"coding": [{"system": "http://snomed.info", "code": "394577000", "display": assigned_track}]},
-            "participant": [{
-                "type": [{"coding": [{"system": "http://hl7.org", "code": "PPRF", "display": "primary performer"}]}],
-                "individual": {"display": doctor_name}
-            }],
-            "period": {"end": datetime.now().isoformat()}
-        }
-        return json.dumps(fhir_encounter, indent=2)
+    def hash_aadhaar(aadhaar_no: str) -> str:
+        """SHA-256 Hashes Aadhaar numbers to ensure data protection compliance."""
+        return hashlib.sha256(aadhaar_no.encode()).hexdigest()[:16]
 
 LANG_PACK = {
     "en": {
         "title": "🏥 Visakhapatnam Smart Health Enterprise Hub",
-        "subtitle": "Hardware-linked, ML-optimized management of stock, crowds, beds, and rosters.",
-        "triage_header": "📝 Frontline Patient AI Triage",
-        "doc_header": "👨‍⚕️ Doctor Consultation Room & Clearance",
-        "doc_select_lbl": "Select Attending Medical Officer On-Duty:",
-        "input_label": "Enter Patient Complaints / Clinical Presentation Note:",
-        "input_placeholder": "e.g., Patient age 24, showing high fever and severe chills.",
-        "submit_btn": "Process & Issue Token",
-        "call_btn": "✅ Treat, Discharge & Log Next Patient",
-        "discharge_bed_btn": "🛏️ Free Up 1 Occupied Oxygen Bed",
-        "no_patients": "🎉 No waiting patients! Triage line is fully cleared.",
+        "subtitle": "Biometric Ingestion Gateway & Closed-Loop Pharmacy Verification Engine.",
+        "triage_header": "🛰️ Entrance Kiosk: Autonomous Aadhaar Biometric Scan",
+        "doc_header": "👨‍⚕️ Doctor Consultation Room & Prescription Desk",
+        "pharma_header": "💊 Closed-Loop Pharmacy Dispensing Desk",
+        "aadhaar_label": "Swipe Aadhaar Card / Place Thumb on Scanner (Simulate 12-Digit Entry):",
+        "input_label": "Primary Chief Complaint / Clinical Presentation Note:",
+        "input_placeholder": "e.g., Patient showing high fever and severe chills.",
+        "med_prescribe_lbl": "Prescribe Medicines (Comma Separated):",
+        "doc_select_lbl": "Select Attending Medical Officer:",
+        "submit_btn": "🔗 Ingest UIDAI Biometrics & Issue Token",
+        "rx_btn": "✍️ Issue Prescription & Call Next",
+        "dispense_btn": "🎯 Verify Patient Thumbprint & Dispense Meds",
         "metrics_header": "📊 Real-Time Operations Telemetry",
         "waiting": "Waiting Patients",
         "beds_headline": "🛏️ Live Bed Matrix Status",
         "vacant": "vacant", "stable": "STABLE", "high_load": "HIGH LOAD", "critical": "CRITICAL",
         "ambulance": "📢 AMBULANCE DISPATCH CONTROLLER",
-        "amb_divert": "⚠️ [DIVERTING PROTOCOL ACTIVE] Redirecting inbound oxygen emergency logistics directly to CHC Anakapalle!",
-        "amb_stable": "✅ [FACILITY UNLOCKED] Inbound transport cleared for direct entry.",
-        "sync_btn": "🔒 Securely Sync Anonymized FHIR Cloud Payload",
-        "route_alloc": "Route Allocated", "token_success": "Token Logged Successfully!",
-        "empty_warning": "⚠️ Input prompt context text is empty.",
-        "cache_balanced": "📭 Cache balanced. Zero changes pending transmission.",
-        "crypt_shield": "🔐 FHIR Interoperability Shield Active! Universally compliant encrypted payload built:",
-        "hardware_title": "🛰️ IoT Sensor & ML Predictive Pipelines",
-        "hw_cam_btn": "📷 Simulate Computer Vision Waiting Room Overflow (+5 People Counted)",
-        "hw_geo_btn": "📍 Authenticate On-Duty Doctor via Geo-Fenced Mobile Biometrics",
-        "hw_ml_btn": "🌦️ Run ML Monsoon Weather Predictive Forecast (Rain > 250mm)",
-        "sim_success": "💥 Action registered successfully. System states updated dynamically.",
         "sync_header": "🛡️ Cryptographic Transmission & Cloud Backhaul Sync",
-        "archive_header": "📁 Historical Operational Telemetry Archive",
-        "csv_btn": "⬇️ Download Historical Operational CSV Ledger"
+        "archive_header": "📁 Secure Operational Telemetry Log Archive"
     },
     "te": {
         "title": "🏥 విశాఖపట్నం జిల్లా స్మార్ట్ హెల్త్ ఎంటర్‌ప్రైజ్ హబ్",
-        "subtitle": "మందుల స్టాక్, రోగుల సంఖ్య, బెడ్ల లభ్యత మరియు హాజరు యొక్క ప్రత్యక్ష IoT పర్యవేక్షణ.",
-        "triage_header": "📝 రోగుల ఐటియాజ్ పర్యవేక్షణ (AI Triage)",
-        "doc_header": "👨‍⚕️ వైద్యుల చికిత్స మరియు డిశ్చార్జ్ గది",
+        "subtitle": "ఆటోమేటిక్ ఆధార్ బయోమెట్రిక్ రిజిస్ట్రేషన్ మరియు సురక్షిత మందుల పంపిణీ వ్యవస్థ.",
+        "triage_header": "🛰️ ప్రవేశ ద్వారం: ఆటోమేటిక్ ఆధార్ బయోమెట్రిక్ స్కాన్ కౌంటర్",
+        "doc_header": "👨‍⚕️ వైద్యుల చికిత్స మరియు మందుల ప్రిస్క్రిప్షన్ గది",
+        "pharma_header": "💊 ఫార్మసీ మందుల పంపిణీ కౌంటర్ (Pharma Desk)",
+        "aadhaar_label": "ఆధార్ కార్డ్‌ను స్వైప్ చేయండి / బయోమెట్రిక్ స్కానర్‌పై బొటనవేలు ఉంచండి:",
+        "input_label": "రోగి యొక్క ఆరోగ్య సమస్యల వివరాలు:",
+        "input_placeholder": "ఉదాహరణకు: తీవ్రమైన జ్వరం మరియు వణుకు ఉంది.",
+        "med_prescribe_lbl": "మందుల వివరాలు (కామాలతో వేరు చేయండి):",
         "doc_select_lbl": "చికిత్స అందిస్తున్న వైద్యుడిని ఎంచుకోండి:",
-        "input_label": "రోగి యొక్క ఆరోగ్య సమస్యల వివరాలను నమోదు చేయండి:",
-        "input_placeholder": "ఉదాహరణకు: రోగి వయస్సు 24 సంవత్సరాలు, తీవ్రమైన జ్వరం మరియు వణుకు ఉంది.",
-        "submit_btn": "టోకెన్ జారీ చేయండి",
-        "call_btn": "✅ రోగికి చికిత్స చేసి రికార్డులలో భద్రపరచండి",
-        "discharge_bed_btn": "🛏️ ఒక ఆక్సిజన్ బెడ్‌ను ఖాళీ చేయండి",
-        "no_patients": "🎉 నిరీక్షణ జాబితా ఖాళీగా ఉంది! అందరికీ చికిత్స పూర్తయింది.",
+        "submit_btn": "🔗 ఆధార్ బయోమెట్రిక్స్ సేకరించి టోకెన్ ఇవ్వండి",
+        "rx_btn": "✍️ ప్రిస్క్రిప్షన్ జారీ చేయండి",
+        "dispense_btn": "🎯 రోగి బయోమెట్రిక్స్ ధృవీకరించి మందులు ఇవ్వండి",
         "metrics_header": "📊 ప్రత్యక్ష ఆరోగ్య కేంద్రం వివరాలు",
         "waiting": "వేచి ఉన్న రోగులు",
         "beds_headline": "🛏️ బెడ్ల లభ్యత మరియు స్థితి వివరాలు",
         "vacant": "ఖాళీగా ఉన్నాయి", "stable": "తగినంత స్టాక్ ఉంది", "high_load": "రోగుల ఒత్తిడి ఎక్కువగా ఉంది", "critical": "అత్యంత ప్రమాదకరం",
         "ambulance": "📢 అంబులెన్స్ రూటింగ్ కంట్రోలర్ (Ambulance Route)",
-        "amb_divert": "⚠️ [రూటింగ్ హెచ్చరిక] ఆక్సిజన్ బెడ్ల కొరత! నాన్-క్రిటికల్ అంబులెన్స్‌లను అనకాపల్లి CHC కి మళ్లించండి.",
-        "amb_stable": "✅ [రూటింగ్ సాధారణం] ఇన్‌బౌండ్ అంబులెన్స్‌లు నేరుగా రావచ్చు.",
-        "sync_btn": "🔒 ఎన్‌క్రిప్టెడ్ క్లౌడ్ డేటా ప్యాకేజీని పంపండి",
-        "route_alloc": "కేటాయించిన విభాగం", "token_success": "టోకెన్ విజయవంతంగా నమోదు చేయబడింది!",
-        "empty_warning": "⚠️ సమాచారం ఏమీ నమోదు చేయలేదు.",
-        "cache_balanced": "📭 క్లౌడ్ డేటా సమకాలీకరణ నిల్వ ఖాళీగా ఉంది.",
-        "crypt_shield": "🔐 FHIR రక్షణ యాక్టివ్‌గా ఉంది! ఎన్‌క్రిప్ట్ చేయబడిన అంతర్జాతీయ ప్రమాణాల డేటా ప్యాకేజీ:",
-        "hardware_title": "🛰️ IoT సెన్సార్ & ML ప్రిడిక్టివ్ పైప్‌లైన్స్",
-        "hw_cam_btn": "📷 కంప్యూటర్ విజన్ కెమెరా ఓవర్‌ఫ్లో పరీక్షించండి (+5 మంది వ్యక్తులు)",
-        "hw_geo_btn": "📍 జియో-ఫెన్స్డ్ మొబైల్ బయోమెట్రిక్స్ ద్వారా వైద్యుడి హాజరును ధృవీకరించండి",
-        "hw_ml_btn": "🌦️ ML వర్షపాత ప్రిడిక్టివ్ ఫోర్‌కాస్ట్ రన్ చేయండి (వర్షపాతం > 250mm)",
-        "sim_success": "💥 చర్య విజయవంతంగా నమోదు చేయబడింది. వ్యవస్థ అప్‌డేట్ చేయబడింది.",
         "sync_header": "🛡️ సురక్షిత డేటా ఎన్‌క్రిప్షన్ మరియు క్లౌడ్ సమకాలీకరణ",
-        "archive_header": "📁 చారిత్రక కార్యాచరణ టెలిమెట్రీ ఆర్కైవ్ (Logs)",
-        "csv_btn": "⬇️ కార్యాచరణ CSV నివేదికను డౌన్‌లోడ్ చేయండి"
+        "archive_header": "📁 చారిత్రక కార్యాచరణ టెలిమెట్రీ ఆర్కైవ్ (Logs)"
     }
 }
 
@@ -140,117 +126,82 @@ text = LANG_PACK[lang_code]
 st.title(text["title"])
 st.caption(text["subtitle"])
 st.markdown("---")
-col1, col2 = st.columns([1, 1.2])
+
+col1, col2 = st.columns([1, 1.1])
 
 with col1:
-    # ── PATIENT INFLOW (TRIAGE) ──
+    # ── TOUCHPOINT 1: ENTRANCE INTERFACE - AUTOMATED AADHAAR INGESTION ──
     st.header(text["triage_header"])
-    user_input = st.text_area(text["input_label"], placeholder=text["input_placeholder"], height=100)
+    p_aadhaar = st.text_input(text["aadhaar_label"], max_chars=12, type="password", key="p_aad_reg")
+    user_input = st.text_area(text["input_label"], placeholder=text["input_placeholder"])
     
-    def parse_and_triage(raw_text: str) -> str:
-        if re.search(r'(pregnancy|anc|pnc|lmp|maternal)', raw_text, re.IGNORECASE): return "Maternal"
-        if re.search(r'(bite|snake|venom)', raw_text, re.IGNORECASE) or "high fever" in raw_text.lower(): return "Emergency"
-        return "General"
+    # Secure Mock Decryption Matrix matching Aadhaar hardware inputs
+    UIDAI_HARDWARE_DECRYPTION_DATABASE = {
+        "555566667777": "K. Siva Kumar (Aadhaar Verified)",
+        "111122223333": "P. Lakshmi Bai (Aadhaar Verified)",
+        "999988887777": "V. Srinivasa Rao (Aadhaar Verified)"
+    }
 
-    def generate_token(category: str) -> str:
+    def generate_secure_token(category: str, a_num: str, name: str) -> str:
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         today = datetime.now().strftime('%Y-%m-%d')
         cursor.execute("SELECT COUNT(*) FROM patient_queue WHERE category = ? AND date(arrival_time) = ?", (category, today))
         count = cursor.fetchone()[0] + 1
-        token_id = f"{'EMER' if category=='Emergency' else 'MAT' if category=='Maternal' else 'GEN'}-{count:03d}"
-        cursor.execute("INSERT INTO patient_queue (token_id, category, status, arrival_time) VALUES (?, ?, 'WAITING', ?)", (token_id, category, datetime.now().isoformat()))
+        prefix = {"Emergency": "EMER", "Maternal": "MAT", "General": "GEN"}.get(category, "GEN")
+        token_id = f"{prefix}-{count:03d}"
+        
+        a_hash = CryptoProtocol.hash_aadhaar(a_num)
+        cursor.execute("INSERT INTO patient_queue (token_id, category, status, arrival_time, patient_aadhaar_hash, patient_name) VALUES (?, ?, 'WAITING', ?, ?, ?)", 
+                       (token_id, category, datetime.now().isoformat(), a_hash, name))
         conn.commit()
         conn.close()
         return token_id
 
     if st.button(text["submit_btn"], type="primary", use_container_width=True):
-        if user_input:
-            assigned_route = parse_and_triage(user_input)
-            generate_token(assigned_route)
-            st.success(f"✅ {text['route_alloc']}: **{assigned_route}** | {text['token_success']}")
-            st.rerun()
-        else:
-            st.warning(text["empty_warning"])
+        if len(p_aadhaar) == 12 and user_input:
+            if p_aadhaar in UIDAI_HARDWARE_DECRYPTION_DATABASE:
+                # Automate profile generation directly from the biometric card payload
+                fetched_legal_name = UIDAI_HARDWARE_DECRYPTION_DATABASE[p_aadhaar]
+                assigned_route = "Emergency" if re.search(r'(bite|snake|venom|fever)', user_input, re.IGNORECASE) else "General"
+                t_id = generate_secure_token(assigned_route, p_aadhaar, fetched_legal_name)
+                st.success(f"🔐 [UIDAI SUCCESS] Thumbprint Confirmed! Legal Name Extracted: **{fetched_legal_name}** | Issued Token: **{t_id}**")
+                st.rerun()
+            else:
+                st.error("🚨 [BIOMETRIC FAILURE] Provided Aadhaar signature does not match any registered thumbprint records in local cache.")
+        else: st.warning("⚠️ Please scan a valid 12-digit Aadhaar card and input clinical complaints context.")
 
-    # ── RELATIONAL OUTFLOW: DOCTOR CLEARANCE ENGINE WITH ATTENDING TRACKING ──
+    # ── TOUCHPOINT 2: DOCTOR DESK & PRESCRIPTION WRITER ──
     st.markdown("---")
     st.header(text["doc_header"])
     
-    # Extract currently checked-in doctors to populate selection box dynamically
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT doctor_name FROM doctor_roster WHERE attendance_status = 'PRESENT'")
-    active_docs_raw = cursor.fetchall()
+    active_doctors = [row[0] for row in cursor.fetchall()]
+    cursor.execute("SELECT token_id, patient_name, patient_aadhaar_hash FROM patient_queue WHERE status = 'WAITING' ORDER BY arrival_time ASC LIMIT 1")
+    current_patient_row = cursor.fetchone()
     conn.close()
     
-    active_doctors_list = [row[0] for row in active_docs_raw] if active_docs_raw else ["Default On-Call Officer"]
-    selected_attending_doctor = st.selectbox(text["doc_select_lbl"], active_doctors_list)
-
-    if st.button(text["call_btn"], use_container_width=True):
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        
-        # Pull the oldest patient in the queue
-        cursor.execute("SELECT token_id, category FROM patient_queue WHERE status = 'WAITING' ORDER BY arrival_time ASC LIMIT 1")
-        next_patient = cursor.fetchone()
-        
-        if next_patient:
-            target_token = next_patient[0]
-            target_category = next_patient[1]
-            current_time = datetime.now().isoformat()
-            current_date = datetime.now().strftime('%Y-%m-%d')
-            
-            cursor.execute("SELECT COUNT(*) FROM patient_queue WHERE status = 'WAITING'")
-            current_backlog_density = cursor.fetchone()[0]
-            
-            # Update patient file status
-            cursor.execute("UPDATE patient_queue SET status = 'COMPLETED', called_time = ? WHERE token_id = ?", (current_time, target_token))
-            
-            # Write to historical logs linking the selected doctor's identity
-            cursor.execute("""
-                INSERT INTO facility_telemetry_logs (log_date, token_id, category, treatment_timestamp, treating_doctor, active_waiting_at_discharge)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (current_date, target_token, target_category, current_time, selected_attending_doctor, current_backlog_density))
-            
-            conn.commit()
-            st.toast(f"👨‍⚕️ {selected_attending_doctor} Logged Treatment for: {target_token}")
-        else:
-            st.info(text["no_patients"])
-        conn.close()
-        st.rerun()
-
-    # ── IoT PERIPHERALS & SURGE ENGINES ──
-    st.markdown("---")
-    st.markdown(f"### {text['hardware_title']}")
+    selected_doctor = st.selectbox(text["doc_select_lbl"], active_doctors if active_doctors else ["On-Call Officer"])
     
-    if st.button(text["hw_cam_btn"], use_container_width=True):
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        current_time_str = datetime.now().isoformat()
-        base_id = datetime.now().microsecond
-        for i in range(5):
-            cursor.execute("INSERT INTO patient_queue (token_id, category, status, arrival_time) VALUES (?, 'General', 'WAITING', ?)", (f"CAM-VOL-{base_id}-{i}", current_time_str))
-        conn.commit()
-        conn.close()
-        st.rerun()
-
-    if st.button(text["hw_geo_btn"], use_container_width=True):
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("UPDATE doctor_roster SET attendance_status = 'PRESENT' WHERE doctor_id = 'DOC-02'")
-        conn.commit()
-        conn.close()
-        st.success(text["sim_success"])
-        st.rerun()
-
-    if st.button(text["hw_ml_btn"], use_container_width=True):
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("UPDATE medicine_stock SET reorder_level = 150 WHERE item_name = 'Artesunate (Malaria)'")
-        conn.commit()
-        conn.close()
-        st.rerun()
+    if current_patient_row:
+        st.info(f"👉 **Active Patient on Desk:** {current_patient_row[0]} - {current_patient_row[1]}")
+        meds_prescribed = st.text_input(text["med_prescribe_lbl"], placeholder="e.g., Paracetamol 500mg, Artesunate")
+        
+        if st.button(text["rx_btn"], use_container_width=True):
+            if meds_prescribed:
+                conn = sqlite3.connect(DB_NAME)
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO prescriptions (token_id, aadhaar_hash, prescribed_meds, doctor_name) VALUES (?, ?, ?, ?)",
+                               (current_patient_row[0], current_patient_row[2], meds_prescribed, selected_doctor))
+                cursor.execute("UPDATE patient_queue SET status = 'IN_PHARMACY', called_time = ? WHERE token_id = ?", (datetime.now().isoformat(), current_patient_row[0]))
+                conn.commit()
+                conn.close()
+                st.success("📝 Prescription electronically signed and routed to Pharmacy desk.")
+                st.rerun()
+            else: st.warning("⚠️ Please specify medications before generating the prescription record.")
+    else: st.caption("🎉 All patient triage lines are currently clear.")
 
 with col2:
     st.header(text["metrics_header"])
@@ -260,16 +211,69 @@ with col2:
     waiting_count = cursor.fetchone()[0]
     cursor.execute("SELECT bed_type, total_beds, occupied_beds FROM bed_occupancy ORDER BY ROWID")
     beds = cursor.fetchall()
-    cursor.execute("SELECT doctor_name, specialty, attendance_status FROM doctor_roster")
-    roster = cursor.fetchall()
     
-    # Read persistent logs to show entries on the screen layout
-    cursor.execute("SELECT log_date, token_id, category, treatment_timestamp, treating_doctor FROM facility_telemetry_logs ORDER BY log_id DESC LIMIT 5")
-    historical_logs_raw = cursor.fetchall()
+    cursor.execute("""
+        SELECT p.token_id, q.patient_name, p.prescribed_meds, p.doctor_name, p.aadhaar_hash 
+        FROM prescriptions p JOIN patient_queue q ON p.token_id = q.token_id 
+        WHERE p.dispense_status = 'PENDING'
+    """)
+    pharma_queue = cursor.fetchall()
+    
+    cursor.execute("SELECT log_date, token_id, category, treating_doctor, dispense_status FROM facility_telemetry_logs ORDER BY log_id DESC LIMIT 4")
+    historical_logs = cursor.fetchall()
     conn.close()
     
-    st.metric(label=text["waiting"], value=f"{waiting_count}")
+    st.metric(label=text["waiting"], value=f"{waiting_count} Patients Active")
     
+    # ── TOUCHPOINT 3: CLOSED-LOOP PHARMACY BIOMETRIC MATCHING ──
+    st.markdown("---")
+    st.header(text["pharma_header"])
+    
+    if pharma_queue:
+        pharma_options = [f"{row[0]} - {row[1]}" for row in pharma_queue]
+        selected_pharma_patient = st.selectbox("Select Patient Token at Counter:", pharma_options)
+        
+        # Secondary verification input (Simulates placing thumb on biometric scanner)
+        pharma_verify_aadhaar = st.text_input("Re-scan Patient Thumbprint (Enter Aadhaar to match):", max_chars=12, type="password", key="pharma_aad")
+        
+        if st.button(text["dispense_btn"], type="secondary", use_container_width=True):
+            selected_idx = pharma_options.index(selected_pharma_patient)
+            target_token, target_name, target_meds, target_doc, target_hash = pharma_queue[selected_idx]
+            
+            # Compute input hash to check authenticity against registration parameters
+            input_hash = CryptoProtocol.hash_aadhaar(pharma_verify_aadhaar)
+            
+            if input_hash == target_hash:
+                conn = sqlite3.connect(DB_NAME)
+                cursor = conn.cursor()
+                
+                # Update inventory states based on prescription content strings matches
+                if "paracetamol" in target_meds.lower():
+                    cursor.execute("UPDATE medicine_stock SET current_stock = current_stock - 1 WHERE item_name LIKE '%Paracetamol%'")
+                if "artesunate" in target_meds.lower() or "malaria" in target_meds.lower():
+                    cursor.execute("UPDATE medicine_stock SET current_stock = current_stock - 1 WHERE item_name LIKE '%Artesunate%'")
+                if "venom" in target_meds.lower():
+                    cursor.execute("UPDATE medicine_stock SET current_stock = current_stock - 1 WHERE item_name LIKE '%Anti-Venom%'")
+                
+                current_time_str = datetime.now().isoformat()
+                cursor.execute("UPDATE prescriptions SET dispense_status = 'DISPENSED', pharma_verification_timestamp = ? WHERE token_id = ?", (current_time_str, target_token))
+                cursor.execute("UPDATE patient_queue SET status = 'DISCHARGED' WHERE token_id = ?", (target_token,))
+                
+                cursor.execute("""
+                    INSERT INTO facility_telemetry_logs (log_date, token_id, category, treatment_timestamp, treating_doctor, aadhaar_hash_verified, dispense_status)
+                    VALUES (?, ?, 'Discharged', ?, ?, 'TRUE_BIOMETRIC_MATCH', 'DISPENSED')
+                """, (datetime.now().strftime('%Y-%m-%d'), target_token, current_time_str, target_doc))
+                
+                conn.commit()
+                conn.close()
+                st.success(f"🎯 [BIOMETRICS MATCHED] Aadhaar verified for {target_name}. Medications [{target_meds}] logged and distributed safely.")
+                st.rerun()
+            else:
+                st.error("🚨 [SECURITY CRITICAL] Biometric authentication failed! Fingerprint mismatch or invalid Aadhaar index mapping.")
+    else:
+        st.caption("ℹ️ No prescriptions currently pending distribution in the pharmacy corridor.")
+
+    # Bed Infrastructure Status Grid
     st.markdown(f"### {text['beds_headline']}")
     oxygen_bed_vacant = 0
     for b_type, total, occupied in beds:
@@ -277,61 +281,31 @@ with col2:
         if b_type == "Oxygen Beds": oxygen_bed_vacant = vacant
         ratio = vacant / total
         stress_label = text["critical"] if ratio <= 0.1 else text["high_load"] if ratio <= 0.3 else text["stable"]
-        color_tag = "🔴" if ratio <= 0.1 else "🟡" if ratio <= 0.3 else "✅"
-        st.markdown(f"* **{b_type}**: {occupied}/{total} ({vacant} {text['vacant']}) ──> {color_tag} **{stress_label}**")
+        st.markdown(f"* **{b_type}**: {occupied}/{total} ──> **{stress_label}**")
 
-    if oxygen_bed_vacant <= 1:
-        if st.button(text["discharge_bed_btn"], type="secondary", use_container_width=True):
-            conn = sqlite3.connect(DB_NAME)
-            cursor = conn.cursor()
-            cursor.execute("UPDATE bed_occupancy SET occupied_beds = occupied_beds - 1 WHERE bed_type = 'Oxygen Beds'")
-            conn.commit()
-            conn.close()
-            st.rerun()
-
-    st.markdown("### 👨‍⚕️ Live Medical Roster Coverage")
-    for name, spec, status in roster:
-        st.markdown(f"* {'🟢' if status == 'PRESENT' else '⚪'} **{name}** ({spec}) ──> {status}")
-
-# ── AMBULANCE DIRECTION SYSTEM AUTOMATION ──
+# Ambulance Direction Control Pipeline
 st.markdown("---")
 st.markdown(f"### {text['ambulance']}")
-if oxygen_bed_vacant <= 1:
-    st.error(text["amb_divert"])
-else:
-    st.success(text["amb_stable"])
+if oxygen_bed_vacant <= 1: st.error(text["amb_divert"])
+else: st.success(text["amb_stable"])
 
-# ── HISTORICAL TELEMETRY EXPORTER WITH DOCTOR PROFILES ──
+# Historical Operations Audit Registry Panel Viewer
 st.markdown("---")
 st.markdown(f"### {text['archive_header']}")
-if historical_logs_raw:
-    st.dataframe(historical_logs_raw, column_config={"0": "Log Date", "1": "Patient Token ID", "2": "Clinical Track", "3": "Resolution Timestamp", "4": "Attending Doctor"}, use_container_width=True)
-    
-    # Map logs including doctor fields into a standard data string buffer
-    csv_buffer = "Log_Date,Token_ID,Clinical_Track,Resolution_Timestamp,Attending_Doctor\n"
-    for row in historical_logs_raw:
-        csv_buffer += f"{row[0]},{row[1]},{row[2]},{row[3]},{row[4]}\n"
-        
-    st.download_button(label=text["csv_btn"], data=csv_buffer, file_name=f"vizag_health_telemetry_{datetime.now().strftime('%Y-%m-%d')}.csv", mime="text/csv", use_container_width=True)
-else:
-    st.caption("ℹ️ No historical consultations recorded yet today.")
+if historical_logs:
+    st.dataframe(historical_logs, column_config={"0": "Date", "1": "Token ID", "2": "State", "3": "Attending Doctor", "4": "Biometrics Check"}, use_container_width=True)
 
-# ── NATIONAL COMPLIANCE FHIR SYNCERER WITH PARTICIPANT ATTRIBUTES ──
+# Compliance Outbox FHIR Data Packer
 st.markdown("---")
 st.markdown(f"### {text['sync_header']}")
 if st.button(text["sync_btn"], use_container_width=True):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("SELECT token_id, category FROM patient_queue WHERE status = 'WAITING' LIMIT 1")
-    target_row = cursor.fetchone()
+    cursor.execute("SELECT token_id, prescribed_meds, doctor_name FROM prescriptions WHERE dispense_status = 'DISPENSED' ORDER BY prescription_id DESC LIMIT 1")
+    sync_row = cursor.fetchone()
     conn.close()
-    
-    if target_row:
-        # Generates compliant FHIR instance embedding the selected performer context string
-        fhir_payload_json = InteroperabilityEngine.export_to_fhir_standard_json(target_row[0], target_row[1], selected_attending_doctor)
-        encrypted_fhir_stream = CryptoProtocol.encrypt(fhir_payload_json)
+    if sync_row:
+        fhir_payload_json = json.dumps({"resourceType": "Encounter", "id": sync_row[0], "status": "finished", "serviceType": {"display": sync_row[1]}, "individual": {"display": sync_row[2]}}, indent=2)
         st.info(f"{text['crypt_shield']}")
         st.code(fhir_payload_json, language="json")
-        st.warning(f"🔒 Encrypted ASCII Outbox Data Frame: `{encrypted_fhir_stream[:120]}...`")
-    else:
-        st.info(text["cache_balanced"])
+    else: st.info("📭 Cache balanced. Zero changes pending transmission.")
