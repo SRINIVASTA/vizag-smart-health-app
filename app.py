@@ -3,6 +3,7 @@ import sqlite3
 import base64
 import re
 import json
+import csv
 from datetime import datetime
 
 DB_NAME = "web_smart_health.db"
@@ -19,9 +20,20 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS doctor_roster 
         (doctor_id TEXT PRIMARY KEY, doctor_name TEXT, specialty TEXT, attendance_status TEXT)''')
     
+    # HARDENED LOGS TABLE: Explicitly records treating doctor name alongside data metrics
+    cursor.execute('''CREATE TABLE IF NOT EXISTS facility_telemetry_logs (
+        log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        log_date TEXT,
+        token_id TEXT,
+        category TEXT,
+        treatment_timestamp TEXT,
+        treating_doctor TEXT,
+        active_waiting_at_discharge INTEGER
+    )''')
+    
     cursor.execute("INSERT OR IGNORE INTO medicine_stock VALUES ('Paracetamol 500mg', 120, 200), ('Anti-Venom Injection', 3, 10), ('Artesunate (Malaria)', 15, 50)")
     cursor.execute("INSERT OR IGNORE INTO bed_occupancy VALUES ('General Ward', 20, 14), ('Oxygen Beds', 10, 9), ('Isolation Unit', 5, 2)")
-    cursor.execute("INSERT OR IGNORE INTO doctor_roster VALUES ('DOC-01', 'Dr. Ramesh Babu', 'General Physician', 'PRESENT'), ('DOC-02', 'Dr. S. Lakshmi', 'Maternal Specialist', 'ABSENT')")
+    cursor.execute("INSERT OR IGNORE INTO doctor_roster VALUES ('DOC-01', 'Dr. Ramesh Babu', 'General Physician', 'PRESENT'), ('DOC-02', 'Dr. S. Lakshmi', 'Maternal Specialist', 'PRESENT')")
     conn.commit()
     conn.close()
 
@@ -36,13 +48,17 @@ class CryptoProtocol:
 
 class InteroperabilityEngine:
     @staticmethod
-    def export_to_fhir_standard_json(patient_token: str, assigned_track: str) -> str:
+    def export_to_fhir_standard_json(patient_token: str, assigned_track: str, doctor_name: str) -> str:
         fhir_encounter = {
             "resourceType": "Encounter",
             "id": patient_token,
             "status": "finished",
             "class": {"system": "http://hl7.org", "code": "AMB", "display": "ambulatory"},
             "serviceType": {"coding": [{"system": "http://snomed.info", "code": "394577000", "display": assigned_track}]},
+            "participant": [{
+                "type": [{"coding": [{"system": "http://hl7.org", "code": "PPRF", "display": "primary performer"}]}],
+                "individual": {"display": doctor_name}
+            }],
             "period": {"end": datetime.now().isoformat()}
         }
         return json.dumps(fhir_encounter, indent=2)
@@ -52,11 +68,12 @@ LANG_PACK = {
         "title": "🏥 Visakhapatnam Smart Health Enterprise Hub",
         "subtitle": "Hardware-linked, ML-optimized management of stock, crowds, beds, and rosters.",
         "triage_header": "📝 Frontline Patient AI Triage",
-        "doc_header": "👨‍⚕️ Doctor Consultation Room",
+        "doc_header": "👨‍⚕️ Doctor Consultation Room & Clearance",
+        "doc_select_lbl": "Select Attending Medical Officer On-Duty:",
         "input_label": "Enter Patient Complaints / Clinical Presentation Note:",
         "input_placeholder": "e.g., Patient age 24, showing high fever and severe chills.",
         "submit_btn": "Process & Issue Token",
-        "call_btn": "✅ Treat & Discharge Next Patient",
+        "call_btn": "✅ Treat, Discharge & Log Next Patient",
         "discharge_bed_btn": "🛏️ Free Up 1 Occupied Oxygen Bed",
         "no_patients": "🎉 No waiting patients! Triage line is fully cleared.",
         "metrics_header": "📊 Real-Time Operations Telemetry",
@@ -76,17 +93,20 @@ LANG_PACK = {
         "hw_geo_btn": "📍 Authenticate On-Duty Doctor via Geo-Fenced Mobile Biometrics",
         "hw_ml_btn": "🌦️ Run ML Monsoon Weather Predictive Forecast (Rain > 250mm)",
         "sim_success": "💥 Action registered successfully. System states updated dynamically.",
-        "sync_header": "🛡️ Cryptographic Transmission & Cloud Backhaul Sync"
+        "sync_header": "🛡️ Cryptographic Transmission & Cloud Backhaul Sync",
+        "archive_header": "📁 Historical Operational Telemetry Archive",
+        "csv_btn": "⬇️ Download Historical Operational CSV Ledger"
     },
     "te": {
         "title": "🏥 విశాఖపట్నం జిల్లా స్మార్ట్ హెల్త్ ఎంటర్‌ప్రైజ్ హబ్",
         "subtitle": "మందుల స్టాక్, రోగుల సంఖ్య, బెడ్ల లభ్యత మరియు హాజరు యొక్క ప్రత్యక్ష IoT పర్యవేక్షణ.",
         "triage_header": "📝 రోగుల ఐటియాజ్ పర్యవేక్షణ (AI Triage)",
-        "doc_header": "👨‍⚕️ వైద్యుల చికిత్స గది (Doctor Desk)",
+        "doc_header": "👨‍⚕️ వైద్యుల చికిత్స మరియు డిశ్చార్జ్ గది",
+        "doc_select_lbl": "చికిత్స అందిస్తున్న వైద్యుడిని ఎంచుకోండి:",
         "input_label": "రోగి యొక్క ఆరోగ్య సమస్యల వివరాలను నమోదు చేయండి:",
         "input_placeholder": "ఉదాహరణకు: రోగి వయస్సు 24 సంవత్సరాలు, తీవ్రమైన జ్వరం మరియు వణుకు ఉంది.",
         "submit_btn": "టోకెన్ జారీ చేయండి",
-        "call_btn": "✅ తదుపరి రోగికి చికిత్స చేసి పంపండి",
+        "call_btn": "✅ రోగికి చికిత్స చేసి రికార్డులలో భద్రపరచండి",
         "discharge_bed_btn": "🛏️ ఒక ఆక్సిజన్ బెడ్‌ను ఖాళీ చేయండి",
         "no_patients": "🎉 నిరీక్షణ జాబితా ఖాళీగా ఉంది! అందరికీ చికిత్స పూర్తయింది.",
         "metrics_header": "📊 ప్రత్యక్ష ఆరోగ్య కేంద్రం వివరాలు",
@@ -106,7 +126,9 @@ LANG_PACK = {
         "hw_geo_btn": "📍 జియో-ఫెన్స్డ్ మొబైల్ బయోమెట్రిక్స్ ద్వారా వైద్యుడి హాజరును ధృవీకరించండి",
         "hw_ml_btn": "🌦️ ML వర్షపాత ప్రిడిక్టివ్ ఫోర్‌కాస్ట్ రన్ చేయండి (వర్షపాతం > 250mm)",
         "sim_success": "💥 చర్య విజయవంతంగా నమోదు చేయబడింది. వ్యవస్థ అప్‌డేట్ చేయబడింది.",
-        "sync_header": "🛡️ సురక్షిత డేటా ఎన్‌క్రిప్షన్ మరియు క్లౌడ్ సమకాలీకరణ"
+        "sync_header": "🛡️ సురక్షిత డేటా ఎన్‌క్రిప్షన్ మరియు క్లౌడ్ సమకాలీకరణ",
+        "archive_header": "📁 చారిత్రక కార్యాచరణ టెలిమెట్రీ ఆర్కైవ్ (Logs)",
+        "csv_btn": "⬇️ కార్యాచరణ CSV నివేదికను డౌన్‌లోడ్ చేయండి"
     }
 }
 
@@ -118,7 +140,6 @@ text = LANG_PACK[lang_code]
 st.title(text["title"])
 st.caption(text["subtitle"])
 st.markdown("---")
-
 col1, col2 = st.columns([1, 1.2])
 
 with col1:
@@ -152,27 +173,54 @@ with col1:
         else:
             st.warning(text["empty_warning"])
 
-    # ── PATIENT OUTFLOW: DOCTOR CLEARANCE ENGINE (REDUCES TELEMETRY LOAD) ──
+    # ── RELATIONAL OUTFLOW: DOCTOR CLEARANCE ENGINE WITH ATTENDING TRACKING ──
     st.markdown("---")
     st.header(text["doc_header"])
+    
+    # Extract currently checked-in doctors to populate selection box dynamically
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT doctor_name FROM doctor_roster WHERE attendance_status = 'PRESENT'")
+    active_docs_raw = cursor.fetchall()
+    conn.close()
+    
+    active_doctors_list = [row[0] for row in active_docs_raw] if active_docs_raw else ["Default On-Call Officer"]
+    selected_attending_doctor = st.selectbox(text["doc_select_lbl"], active_doctors_list)
+
     if st.button(text["call_btn"], use_container_width=True):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        cursor.execute("SELECT token_id FROM patient_queue WHERE status = 'WAITING' ORDER BY arrival_time ASC LIMIT 1")
+        
+        # Pull the oldest patient in the queue
+        cursor.execute("SELECT token_id, category FROM patient_queue WHERE status = 'WAITING' ORDER BY arrival_time ASC LIMIT 1")
         next_patient = cursor.fetchone()
         
         if next_patient:
-            # FIX: Safely unpack the single-item tuple string element index zero before query binding execution
             target_token = next_patient[0]
-            cursor.execute("UPDATE patient_queue SET status = 'COMPLETED', called_time = ? WHERE token_id = ?", (datetime.now().isoformat(), target_token))
+            target_category = next_patient[1]
+            current_time = datetime.now().isoformat()
+            current_date = datetime.now().strftime('%Y-%m-%d')
+            
+            cursor.execute("SELECT COUNT(*) FROM patient_queue WHERE status = 'WAITING'")
+            current_backlog_density = cursor.fetchone()[0]
+            
+            # Update patient file status
+            cursor.execute("UPDATE patient_queue SET status = 'COMPLETED', called_time = ? WHERE token_id = ?", (current_time, target_token))
+            
+            # Write to historical logs linking the selected doctor's identity
+            cursor.execute("""
+                INSERT INTO facility_telemetry_logs (log_date, token_id, category, treatment_timestamp, treating_doctor, active_waiting_at_discharge)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (current_date, target_token, target_category, current_time, selected_attending_doctor, current_backlog_density))
+            
             conn.commit()
-            st.toast(f"👨‍⚕️ Treated and Discharged: {target_token}")
+            st.toast(f"👨‍⚕️ {selected_attending_doctor} Logged Treatment for: {target_token}")
         else:
             st.info(text["no_patients"])
         conn.close()
         st.rerun()
 
-    # ── IoT PERIPHERALS & ML PIPELINES ──
+    # ── IoT PERIPHERALS & SURGE ENGINES ──
     st.markdown("---")
     st.markdown(f"### {text['hardware_title']}")
     
@@ -194,6 +242,7 @@ with col1:
         conn.commit()
         conn.close()
         st.success(text["sim_success"])
+        st.rerun()
 
     if st.button(text["hw_ml_btn"], use_container_width=True):
         conn = sqlite3.connect(DB_NAME)
@@ -213,6 +262,10 @@ with col2:
     beds = cursor.fetchall()
     cursor.execute("SELECT doctor_name, specialty, attendance_status FROM doctor_roster")
     roster = cursor.fetchall()
+    
+    # Read persistent logs to show entries on the screen layout
+    cursor.execute("SELECT log_date, token_id, category, treatment_timestamp, treating_doctor FROM facility_telemetry_logs ORDER BY log_id DESC LIMIT 5")
+    historical_logs_raw = cursor.fetchall()
     conn.close()
     
     st.metric(label=text["waiting"], value=f"{waiting_count}")
@@ -227,7 +280,6 @@ with col2:
         color_tag = "🔴" if ratio <= 0.1 else "🟡" if ratio <= 0.3 else "✅"
         st.markdown(f"* **{b_type}**: {occupied}/{total} ({vacant} {text['vacant']}) ──> {color_tag} **{stress_label}**")
 
-    # Bed Clearance Action
     if oxygen_bed_vacant <= 1:
         if st.button(text["discharge_bed_btn"], type="secondary", use_container_width=True):
             conn = sqlite3.connect(DB_NAME)
@@ -241,7 +293,7 @@ with col2:
     for name, spec, status in roster:
         st.markdown(f"* {'🟢' if status == 'PRESENT' else '⚪'} **{name}** ({spec}) ──> {status}")
 
-# ── AMBULANCE ROUTING INTERCEPTION ──
+# ── AMBULANCE DIRECTION SYSTEM AUTOMATION ──
 st.markdown("---")
 st.markdown(f"### {text['ambulance']}")
 if oxygen_bed_vacant <= 1:
@@ -249,18 +301,34 @@ if oxygen_bed_vacant <= 1:
 else:
     st.success(text["amb_stable"])
 
-# ── COMPLIANCE FHIR ARCHIVE SYNC ──
+# ── HISTORICAL TELEMETRY EXPORTER WITH DOCTOR PROFILES ──
+st.markdown("---")
+st.markdown(f"### {text['archive_header']}")
+if historical_logs_raw:
+    st.dataframe(historical_logs_raw, column_config={"0": "Log Date", "1": "Patient Token ID", "2": "Clinical Track", "3": "Resolution Timestamp", "4": "Attending Doctor"}, use_container_width=True)
+    
+    # Map logs including doctor fields into a standard data string buffer
+    csv_buffer = "Log_Date,Token_ID,Clinical_Track,Resolution_Timestamp,Attending_Doctor\n"
+    for row in historical_logs_raw:
+        csv_buffer += f"{row[0]},{row[1]},{row[2]},{row[3]},{row[4]}\n"
+        
+    st.download_button(label=text["csv_btn"], data=csv_buffer, file_name=f"vizag_health_telemetry_{datetime.now().strftime('%Y-%m-%d')}.csv", mime="text/csv", use_container_width=True)
+else:
+    st.caption("ℹ️ No historical consultations recorded yet today.")
+
+# ── NATIONAL COMPLIANCE FHIR SYNCERER WITH PARTICIPANT ATTRIBUTES ──
 st.markdown("---")
 st.markdown(f"### {text['sync_header']}")
 if st.button(text["sync_btn"], use_container_width=True):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT token_id, category FROM patient_queue WHERE status = 'WAITING' LIMIT 1")
-    row = cursor.fetchone()
+    target_row = cursor.fetchone()
     conn.close()
     
-    if row:
-        fhir_payload_json = InteroperabilityEngine.export_to_fhir_standard_json(row[0], row[1])
+    if target_row:
+        # Generates compliant FHIR instance embedding the selected performer context string
+        fhir_payload_json = InteroperabilityEngine.export_to_fhir_standard_json(target_row[0], target_row[1], selected_attending_doctor)
         encrypted_fhir_stream = CryptoProtocol.encrypt(fhir_payload_json)
         st.info(f"{text['crypt_shield']}")
         st.code(fhir_payload_json, language="json")
