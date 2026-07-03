@@ -12,7 +12,7 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # SELF-HEALING DATABASE MIGRATION ENGINE
+    # SELF-HEALING DATABASE MIGRATION LAYER
     try:
         cursor.execute("SELECT unit_dosages_prescribed FROM prescriptions LIMIT 1")
     except sqlite3.OperationalError:
@@ -21,7 +21,7 @@ def init_db():
         cursor.execute("DROP TABLE IF EXISTS facility_telemetry_logs")
         cursor.execute("DROP TABLE IF EXISTS pharma_roster")
         
-    # Structural Core Schemas
+    # Structural Core Tables Setup
     cursor.execute('''CREATE TABLE IF NOT EXISTS patient_queue (
         token_id TEXT PRIMARY KEY, category TEXT, status TEXT, arrival_time TIMESTAMP, called_time TIMESTAMP,
         patient_aadhaar_hash TEXT, patient_name TEXT, target_doctor TEXT, chief_complaint TEXT)''')
@@ -30,32 +30,16 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS doctor_roster (doctor_id TEXT PRIMARY KEY, doctor_name TEXT, specialty TEXT, attendance_status TEXT)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS pharma_roster (staff_id TEXT PRIMARY KEY, staff_name TEXT, shift_status TEXT)''')
     
-    # HARDENED PRESCRIPTION SCHEMA: Tracks exact medication item list and matching dosage quantities explicitly
     cursor.execute('''CREATE TABLE IF NOT EXISTS prescriptions (
-        prescription_id INTEGER PRIMARY KEY AUTOINCREMENT, 
-        token_id TEXT, 
-        aadhaar_hash TEXT, 
-        prescribed_meds TEXT, 
-        unit_dosages_prescribed TEXT, -- Stores JSON string of specific medicine counts (e.g. Paracetamol: 10)
-        doctor_name TEXT, 
-        dispense_status TEXT DEFAULT 'PENDING', 
-        pharma_verification_timestamp TEXT, 
-        dispensing_pharmacist TEXT)''')
+        prescription_id INTEGER PRIMARY KEY AUTOINCREMENT, token_id TEXT, aadhaar_hash TEXT, prescribed_meds TEXT,
+        unit_dosages_prescribed TEXT, doctor_name TEXT, dispense_status TEXT DEFAULT 'PENDING', 
+        pharma_verification_timestamp TEXT, dispensing_pharmacist TEXT)''')
     
-    # GRANULAR AUDIT SCHEMA: Preserves exact pill counts delivered by the pharmacy technician
     cursor.execute('''CREATE TABLE IF NOT EXISTS facility_telemetry_logs (
-        log_id INTEGER PRIMARY KEY AUTOINCREMENT, 
-        log_date TEXT, 
-        token_id TEXT, 
-        patient_name TEXT, 
-        aadhaar_hash_verified TEXT,
-        chief_complaint TEXT, 
-        detailed_medicines_issued TEXT, -- Saves clear breakdown string (e.g., Paracetamol x10, Artesunate x6)
-        total_pills_dispensed_count INTEGER, 
-        treating_doctor TEXT, 
-        dispensing_pharmacist TEXT, 
-        dispense_status TEXT)''')
+        log_id INTEGER PRIMARY KEY AUTOINCREMENT, log_date TEXT, token_id TEXT, patient_name TEXT, aadhaar_hash_verified TEXT,
+        chief_complaint TEXT, detailed_medicines_issued TEXT, total_pills_dispensed_count INTEGER, treating_doctor TEXT, dispensing_pharmacist TEXT, dispense_status TEXT)''')
     
+    # Seed parameters safely with realistic volume spaces
     cursor.execute("INSERT OR IGNORE INTO medicine_stock VALUES ('Paracetamol 500mg', 1200, 500), ('Anti-Venom Injection', 30, 10), ('Artesunate (Malaria)', 150, 50)")
     cursor.execute("INSERT OR IGNORE INTO bed_occupancy VALUES ('General Ward', 20, 14), ('Oxygen Beds', 10, 9), ('Isolation Unit', 5, 2)")
     cursor.execute("INSERT OR IGNORE INTO doctor_roster VALUES ('DOC-01', 'Dr. Ramesh Babu', 'General Physician', 'PRESENT'), ('DOC-02', 'Dr. S. Lakshmi', 'Maternal Specialist', 'PRESENT')")
@@ -149,6 +133,7 @@ text = LANG_PACK[lang_code]
 st.title(text["title"])
 st.caption(text["subtitle"])
 st.markdown("---")
+
 col1, col2 = st.columns([1, 1.1])
 
 with col1:
@@ -160,13 +145,16 @@ with col1:
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT doctor_name FROM doctor_roster WHERE attendance_status = 'PRESENT'")
-    gate_roster_raw = cursor.fetchall()
+    # FIX A: Use list comprehension to unpack tuples into a clean flat string array immediately
+    gate_doctor_options = [row[0] for row in cursor.fetchall()]
+    
     cursor.execute("SELECT item_name FROM medicine_stock")
-    inventory_items_raw = cursor.fetchall()
+    live_medicine_options = [row[0] for row in cursor.fetchall()]
     conn.close()
     
-    gate_doctor_options = [row for row in gate_roster_raw] if gate_roster_raw else ["General On-Call Officer"]
-    live_medicine_options = [row for row in inventory_items_raw] if inventory_items_raw else ["Paracetamol 500mg"]
+    if not gate_doctor_options: gate_doctor_options = ["General On-Call Officer"]
+    if not live_medicine_options: live_medicine_options = ["Paracetamol 500mg"]
+        
     chosen_kiosk_doctor = st.selectbox(text["gate_doc_select"], gate_doctor_options)
 
     UIDAI_HARDWARE_DECRYPTION_DATABASE = {
@@ -180,7 +168,7 @@ with col1:
         cursor = conn.cursor()
         today = datetime.now().strftime('%Y-%m-%d')
         cursor.execute("SELECT COUNT(*) FROM patient_queue WHERE category = ? AND date(arrival_time) = ?", (category, today))
-        count = cursor.fetchone() + 1
+        count = cursor.fetchone()[0] + 1
         prefix = {"Emergency": "EMER", "Maternal": "MAT", "General": "GEN"}.get(category, "GEN")
         token_id = f"{prefix}-{count:03d}"
         
@@ -211,18 +199,17 @@ with col1:
     
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    # FIX B: Passes the clean string variable filter smoothly to clear the ProgrammingError crash
     cursor.execute("SELECT token_id, patient_name, chief_complaint FROM patient_queue WHERE status = 'WAITING' AND target_doctor = ? ORDER BY arrival_time ASC LIMIT 1", (doc_desk_filter,))
     current_patient_row = cursor.fetchone()
     conn.close()
     
     if current_patient_row:
-        st.info(f"👉 **Next Patient:** {current_patient_row} | Token: {current_patient_row}")
-        st.caption(f"📋 **Reason for Visit Recorded at Gate:** {current_patient_row}")
+        st.info(f"👉 **Next Patient:** {current_patient_row[1]} | Token: {current_patient_row[0]}")
+        st.caption(f"📋 **Reason for Visit Recorded at Gate:** {current_patient_row[2]}")
         
-        # 1. Doctor selects multiple medications from the catalog list
         selected_prescription_meds = st.multiselect(text["med_prescribe_lbl"], live_medicine_options)
         
-        # 2. ADVANCED INTERFACE CORE: Dynamically map separate numeric dosage input boxes for EACH selected item
         dosage_allocation_map = {}
         if selected_prescription_meds:
             st.markdown("##### 💊 Set Precise Unit Counts / Pill Volumes:")
@@ -234,41 +221,41 @@ with col1:
         if st.button(text["rx_btn"], use_container_width=True):
             if selected_prescription_meds:
                 med_string_format = ", ".join(selected_prescription_meds)
-                json_dosage_string = json.dumps(dosage_allocation_map) # Serialize pill volumes to string
+                json_dosage_string = json.dumps(dosage_allocation_map)
                 
                 conn = sqlite3.connect(DB_NAME)
                 cursor = conn.cursor()
                 cursor.execute("INSERT INTO prescriptions (token_id, aadhaar_hash, prescribed_meds, unit_dosages_prescribed, doctor_name) VALUES (?, (SELECT patient_aadhaar_hash FROM patient_queue WHERE token_id=?), ?, ?, ?)",
-                               (current_patient_row, current_patient_row, med_string_format, json_dosage_string, doc_desk_filter))
-                cursor.execute("UPDATE patient_queue SET status = 'IN_PHARMACY', called_time = ? WHERE token_id = ?", (datetime.now().isoformat(), current_patient_row))
+                               (current_patient_row[0], current_patient_row[0], med_string_format, json_dosage_string, doc_desk_filter))
+                cursor.execute("UPDATE patient_queue SET status = 'IN_PHARMACY', called_time = ? WHERE token_id = ?", (datetime.now().isoformat(), current_patient_row[0]))
                 conn.commit()
                 conn.close()
                 st.success("📝 Prescription signed and securely routed to pharmacy desk.")
                 st.rerun()
             else: st.warning("⚠️ Please select at least one medication from the active inventory list.")
     else: st.caption(f"🎉 No patients currently waiting specifically for {doc_desk_filter}.")
+
 with col2:
     st.header(text["metrics_header"])
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM patient_queue WHERE status = 'WAITING'")
-    waiting_count = cursor.fetchone()
+    waiting_count = cursor.fetchone()[0]
     cursor.execute("SELECT COUNT(*) FROM medicine_stock")
-    total_registered_medicines = cursor.fetchone()
+    total_registered_medicines = cursor.fetchone()[0]
     cursor.execute("SELECT bed_type, total_beds, occupied_beds FROM bed_occupancy ORDER BY ROWID")
     beds = cursor.fetchall()
     
-    # Extract structural patient fields including the serialized dosage json strings
     cursor.execute("""
         SELECT p.token_id, q.patient_name, p.prescribed_meds, p.unit_dosages_prescribed, p.doctor_name, p.aadhaar_hash, q.chief_complaint 
         FROM prescriptions p JOIN patient_queue q ON p.token_id = q.token_id 
         WHERE p.dispense_status = 'PENDING'
     """)
     pharma_queue = cursor.fetchall()
-    cursor.execute("SELECT staff_name FROM pharma_roster WHERE shift_status = 'ACTIVE'")
-    active_pharmacists_raw = cursor.fetchall()
     
-    # Read expanded columns to render the granular historical tracking download grid view
+    cursor.execute("SELECT staff_name FROM pharma_roster WHERE shift_status = 'ACTIVE'")
+    active_pharmacists_raw = [row[0] for row in cursor.fetchall()]
+    
     cursor.execute("""
         SELECT log_date, token_id, patient_name, chief_complaint, detailed_medicines_issued, total_pills_dispensed_count, treating_doctor, dispensing_pharmacist 
         FROM facility_telemetry_logs ORDER BY log_id DESC LIMIT 10
@@ -276,7 +263,6 @@ with col2:
     historical_logs_raw = cursor.fetchall()
     conn.close()
     
-    # Display Dual Live Telemetry Status Metrics Side-By-Side
     meta_col1, meta_col2 = st.columns(2)
     with meta_col1: st.metric(label=text["waiting"], value=f"{waiting_count} Patients")
     with meta_col2: st.metric(label=text["mod_count_lbl"], value=f"{total_registered_medicines} Types")
@@ -285,35 +271,32 @@ with col2:
     st.markdown("---")
     st.header(text["pharma_header"])
     
-    pharmacist_options = [row for row in active_pharmacists_raw] if active_pharmacists_raw else ["Default Pharmacist"]
+    pharmacist_options = active_pharmacists_raw if active_pharmacists_raw else ["Default Pharmacist"]
     selected_active_pharmacist = st.selectbox(text["pharma_select_lbl"], pharmacist_options)
     
     if pharma_queue:
-        pharma_options = [f"{row} - {row}" for row in pharma_queue]
+        pharma_options = [f"{row[0]} - {row[1]}" for row in pharma_queue]
         selected_pharma_patient = st.selectbox("Select Patient Token at Counter:", pharma_options)
         
-        # Extract metadata metrics for the current selection row
         selected_idx = pharma_options.index(selected_pharma_patient)
         target_token, target_name, target_meds, target_json_doses, target_doc, target_hash, target_complaint = pharma_queue[selected_idx]
         
-        # Display the exact prescription count requests directly on the pharmacist's panel view screen
-        st.markdown("##### 📋 Verified Prescription Orders Items Pull Checklist:")
+        st.markdown("##### 📋 Verified Prescription Orders Checklist:")
         parsed_dosages = json.loads(target_json_doses) if target_json_doses else {}
         for medicine_name, pill_volume in parsed_dosages.items():
-            st.info(f"🔹 **{medicine_name}** ──> Handout Volume Count Requirement: **{pill_volume} units**")
+            st.info(f"Pkg Output Metric: **{medicine_name}** ──> Handout Requirement: **{pill_volume} units**")
             
         if st.button(text["dispense_btn"], type="primary", use_container_width=True):
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
             
-            # Deduct the exact pill count volume numbers directly from stock records fields
             total_dispensed_pills_sum = 0
             breakdown_log_strings_list = []
             
             for medicine_name, pill_volume in parsed_dosages.items():
                 cursor.execute("UPDATE medicine_stock SET current_stock = current_stock - ? WHERE item_name = ?", (pill_volume, medicine_name))
                 total_dispensed_pills_sum += pill_volume
-                breakdown_log_strings_list.append(f"{medicine_name} (-{pill_volume})")
+                breakdown_log_strings_list.append(f"{medicine_name}(-{pill_volume})")
             
             detailed_issued_meds_summary_str = ", ".join(breakdown_log_strings_list) if breakdown_log_strings_list else "None"
             current_time_str = datetime.now().isoformat()
@@ -322,7 +305,6 @@ with col2:
                            (current_time_str, selected_active_pharmacist, target_token))
             cursor.execute("UPDATE patient_queue SET status = 'DISCHARGED' WHERE token_id = ?", (target_token,))
             
-            # GRANULAR TELEMETRY SAVE ACTION WITH QUANTITIES AND EXACT PILL COUNTS LOCKDOWN
             cursor.execute("""
                 INSERT INTO facility_telemetry_logs (log_date, token_id, patient_name, aadhaar_hash_verified, chief_complaint, detailed_medicines_issued, total_pills_dispensed_count, treating_doctor, dispensing_pharmacist, dispense_status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'DISPENSED')
@@ -351,7 +333,7 @@ if oxygen_bed_vacant <= 1: st.error(text["amb_divert"])
 else: st.success(text["amb_stable"])
 
 # =====================================================================
-# DYNAMIC GRANULAR UNIT-DOSE LOG ARCHIVE VIEW & EXPORTER
+# HISTORICAL TELEMETRY GRAPHICS VIEW LOG ARCHIVE DOWNLOADER
 # =====================================================================
 st.markdown("---")
 st.markdown(f"### {text['archive_header']}")
@@ -368,11 +350,11 @@ if historical_logs_raw:
     
     csv_buffer = "Log_Date,Token_ID,Patient_Name,Chief_Complaint,Detailed_Medicine_Breakdown,Total_Pills_Issued,Attending_Doctor,Pharmacist\n"
     for r in historical_logs_raw:
-        csv_buffer += f'"{r}","{r}","{r}","{r}","{r}",{r},"{r}","{r}"\n'
+        csv_buffer += f'"{r[0]}","{r[1]}","{r[2]}","{r[3]}","{r[4]}",{r[5]},"{r[6]}","{r[7]}"\n'
         
     st.download_button(
         label=text["csv_btn"], data=csv_buffer, 
-        file_name=f"vizag_health_granular_unit_doses_{datetime.now().strftime('%Y-%m-%d')}.csv", 
+        file_name=f"uidai_secure_health_log_{datetime.now().strftime('%Y-%m-%d')}.csv", 
         mime="text/csv", use_container_width=True
     )
 else: st.caption("ℹ️ Waiting for verified biometric transactions to populate the spreadsheet archive download desk.")
@@ -387,7 +369,7 @@ if st.button(text["sync_btn"], use_container_width=True):
     sync_row = cursor.fetchone()
     conn.close()
     if sync_row:
-        fhir_payload_json = json.dumps({"resourceType": "Encounter", "id": sync_row, "status": "finished", "serviceType": {"display": sync_row}, "participant": [{"individual": {"display": sync_row}}, {"individual": {"display": sync_row}}]}, indent=2)
+        fhir_payload_json = json.dumps({"resourceType": "Encounter", "id": sync_row[0], "status": "finished", "serviceType": {"display": sync_row[1]}, "participant": [{"individual": {"display": sync_row[2]}}, {"individual": {"display": sync_row[3]}}]}, indent=2)
         st.info(f"{text['crypt_shield']}")
         st.code(fhir_payload_json, language="json")
-    else: st.info("📭 Cache balanced. Zero changes pending transmission.")
+    else: st.info(text["cache_balanced"])
