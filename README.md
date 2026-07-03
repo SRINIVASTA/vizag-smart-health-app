@@ -131,7 +131,7 @@ streamlit run app.py
 
 ## 🌐 Production Web Deployment Steps
 1. Push all modified codebase changes directly to your public GitHub branch repository.
-2. Visit [share.streamlit.io](https://streamlit.io) and establish a handshake connection with your active GitHub profile.
+2. Visit [share.streamlit.io](https://vizag-smart-health-app-hwpexsovxwurku4vqcuwpt.streamlit.app/) and establish a handshake connection with your active GitHub profile.
 3. Click **Deploy App**, enter your specific repository path parameters (`YOUR_USERNAME/vizag-smart-health-app`), select the entry script target point (`app.py`), and hit **Deploy**!
 4. The system will launch on a live public link (e.g., `https://streamlit.app`) in under 60 seconds with **Self-Healing Schema Migrators** fully functional.
 
