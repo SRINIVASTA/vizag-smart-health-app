@@ -78,14 +78,17 @@ if not st.session_state.authenticated:
     
     conn = sqlite3.connect("smart_health.db")
     
-    # FIX 1: Extract string fields cleanly out of tuples via structural unpacking [row[0] for ...]
+    # FIX 1: Extract string fields cleanly out of single-element tuples using row[0]
     dist_list = [row[0] for row in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
     chosen_district = st.sidebar.selectbox(ln["select_district"], dist_list)
     
     fac_cursor = conn.execute("SELECT node_name, node_id FROM administrative_hierarchy WHERE district_name = ?", (chosen_district,)).fetchall()
     
-    # FIX 2: Explicitly separate the query row elements (name and id string elements) to build a clean lookup map
-    facility_map = {name: node_id for name, node_id in fac_cursor}
+    # FIX 2: Check if database query returned records to prevent an empty dictionary crash
+    if fac_cursor:
+        facility_map = {name: node_id for name, node_id in fac_cursor}
+    else:
+        facility_map = {"No Facilities Found": "NONE"}
     
     chosen_facility_name = st.sidebar.selectbox(ln["select_facility"], list(facility_map.keys()))
     target_node_id = facility_map[chosen_facility_name]
@@ -94,8 +97,11 @@ if not st.session_state.authenticated:
     conn.close()
     
     st.sidebar.markdown(f"**🩺 {ln['avail_docs']}:**")
-    for doc_name, spec in doc_rows: 
-        st.sidebar.caption(f"• {doc_name} ({spec})")
+    if doc_rows:
+        for doc_name, spec in doc_rows: 
+            st.sidebar.caption(f"• {doc_name} ({spec})")
+    else:
+        st.sidebar.caption("• No active practitioners checked into this node.")
 
     st.title(ln["login_title"])
     st.caption(f"{ln['login_sub']} | Routing Target: `{target_node_id}`")
