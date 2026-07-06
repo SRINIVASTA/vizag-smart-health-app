@@ -30,7 +30,7 @@ def init_ap_pilot_db():
     cursor.execute("CREATE TABLE IF NOT EXISTS inventory (node_id TEXT, item_name TEXT, current_stock INT, min_required_threshold INT, daily_avg_consumption REAL, PRIMARY KEY (node_id, item_name));")
     cursor.execute("CREATE TABLE IF NOT EXISTS patient_triage_queue (token_id TEXT PRIMARY KEY, node_id TEXT, aadhaar_hash TEXT, patient_phone TEXT, symptoms_logged TEXT, status TEXT);")
     
-    # 🎯 UPDATED RELATIONAL PRESCRIPTIONS TABLE
+    # RELATIONAL PRESCRIPTIONS TABLE
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS patient_prescriptions (
         prescription_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,7 +86,7 @@ def init_ap_pilot_db():
             ("IN-AP-VSP-BHM", "Anti-Viral Medical Kits", 1800, 300, 22.0)
         ])
         
-        # 👤 SEEDING 100 HISTORICAL PATIENTS
+        # SEEDING 100 HISTORICAL PATIENTS
         first_names = ["Ramesh", "Suresh", "Venkat", "Chiranjeevi", "Naidu", "Satish", "Anitha", "Lakshmi", "Durga", "Rama"]
         last_names = ["Pilla", "Kona", "Ganti", "Vanka", "Reddy", "Allu", "Yerra", "Boni", "Koppula", "Myla"]
         symptom_pool = ["High Fever, Continuous Dry Cough", "Acute Diarrhea, Dehydration", "Persistent Dry Cough, Sore Throat"]
@@ -98,7 +98,7 @@ def init_ap_pilot_db():
             aadhaar_mock = str(random.randint(100000000000, 999999999999))
             phone_mock = f"+919{random.randint(10000000, 99999999)}"
             logged_symptoms = random.choice(symptom_pool)
-            patient_records.append((token_id, selected_node[0], str(hash(aadhaar_mock)), phone_mock, f"Patient: {p_name} | {logged_symptoms}", "COMPLETED"))
+            patient_records.append((token_id, selected_node, str(hash(aadhaar_mock)), phone_mock, f"Patient: {p_name} | {logged_symptoms}", "COMPLETED"))
         cursor.executemany("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, ?);", patient_records)
         
         cursor.executemany("INSERT INTO node_operations VALUES (?, ?, ?, ?);", [
@@ -127,14 +127,12 @@ if not st.session_state.authenticated:
     
     conn = sqlite3.connect("smart_health.db")
     
-    # FIX 1: Cleanly extract the string out of the tuple via explicit list unpacking
+    # Extract clean string values from single-column SQLite tuples using row unpacking
     dist_list = [row[0] for row in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
     chosen_district = st.sidebar.selectbox(ln["select_district"], dist_list)
     
-    # FIX 2: Query facility data cleanly based on the unpacked string parameter
     fac_cursor = conn.execute("SELECT node_name, node_id FROM administrative_hierarchy WHERE district_name = ?", (chosen_district,)).fetchall()
     
-    # FIX 3: Robust dictionary generation with a fallback option if the database returns empty
     if fac_cursor:
         facility_map = {node_name: node_id for node_name, node_id in fac_cursor}
     else:
@@ -206,6 +204,8 @@ if not st.session_state.authenticated:
 else:
     ln = LOCALIZATION_DATA[st.session_state.current_lang]
     role = st.session_state.user_role
+    
+    # 🎯 FIX 1: Instantiated at the absolute root of the authenticated state so it's universally accessible by all roles
     node = st.session_state.node_id
     
     if st.sidebar.button(ln["btn_logout"]):
@@ -230,6 +230,7 @@ else:
         for _, alert in anomalies.iterrows():
             st.error(f"🔴 **CRITICAL OUTBREAK WARNING**: PHC Node `{alert['node_name']}` has triggered an epidemic warning score of **{alert['active_epidemic_risk_score']}**! Dispatch response teams.")
         
+        # Matplotlib Rendering Framework Hooks
         st.markdown("---")
         st.subheader("📊 Executive Data Visualizations (Matplotlib Renderers)")
         col1, col2 = st.columns(2)
@@ -262,7 +263,7 @@ else:
         st.header("Clinical Triage Portal")
         conn = sqlite3.connect("smart_health.db")
         
-        docs_query = [d for d, in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (node,)).fetchall()]
+        docs_query = [d[0] for d in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (node,)).fetchall()]
         available_doctors = docs_query if docs_query else ["General OPD Pool"]
         
         # ASHA Worker Triage Intake Layer
@@ -302,13 +303,12 @@ else:
             st.dataframe(queue_df)
             
             if not queue_df.empty:
-                # 🎯 FIXED: Extracted clean Pandas string mapping variables using .iloc[0] to destroy indexing type errors
+                # 🎯 FIX 2: Replaced non-integer mapping lookup with clean series indexing (.iloc[0]) to eliminate the non-integer index TypeError
                 target_patient = queue_df.iloc[0]
                 st.info(f"👉 **Processing Case**: {target_patient['token_id']} | {target_patient['symptoms_logged']}")
                 
                 if doc_mode == "e-Sanjeevani Video Call Telehealth":
                     whatsapp_link = build_esanjeevani_routing_gateway(target_patient['patient_phone'], "Active Assigned Duty Doctor")
-                    st.sidebar.markdown(f"[📞 Click Here to Force Launch External Channel]({whatsapp_link})")
                     st.link_button("📞 Launch Instant Video Consultation Channel", whatsapp_link, type="primary")
                 
                 # Digital Prescription Formulation Sub-Box
@@ -341,13 +341,14 @@ else:
         st.header("Pharmacy Stock & Fulfillment Desk")
         pharma_mode = st.radio("Select Active Inventory Distribution Mode", ["Local Counter Dispensation", "Drone-Routed Aero Resupply Operations"], horizontal=True)
         
-        # 🎯 READ INBOUND PRESCRIPTIONS ROUTED STRAIGHT FROM THE CLINICAL ROOMS
+        # 🎯 FIX 3: Global 'node' declaration in Block 3 ensures it parses safely here
         st.subheader("📥 Inbound Doctor Prescriptions Ledger")
+        conn = sqlite3.connect("smart_health.db")
         rx_df = pd.read_sql_query("SELECT prescription_id, token_id, doctor_name, medication_name, dosage_instructions, consult_mode FROM patient_prescriptions WHERE node_id=? AND status='PENDING'", conn, params=(node,))
         st.dataframe(rx_df)
         
         if not rx_df.empty:
-            # 🎯 FIXED: Avoids multi-index type errors via clean row cell extraction (.iloc[0])
+            # 🎯 FIX 4: Replaced bracket mapping lookup with clean row series extraction (.iloc[0]) to eliminate non-integer lookup type errors
             target_rx = rx_df.iloc[0]
             st.markdown(f"### 🎯 Active Target Order: **Prescription ID {target_rx['prescription_id']}**")
             st.info(f"Patient Token: **{target_rx['token_id']}** | Medication: **{target_rx['medication_name']}** | Channel: **{target_rx['consult_mode']}**")
@@ -355,7 +356,6 @@ else:
             if pharma_mode == "Local Counter Dispensation":
                 if st.button("💊 Process Single-Click Local Counter Dispense"):
                     conn.execute("UPDATE inventory SET current_stock = current_stock - 1 WHERE node_id=? AND item_name=?", (node, target_rx['medication_name']))
-                    # 🎯 SYNTAX ERROR RESOLVED: Appended missing statement closure parenthesis
                     conn.execute("UPDATE patient_prescriptions SET status='DISPENSED' WHERE prescription_id=?", (int(target_rx['prescription_id']),))
                     conn.commit()
                     log_transaction(role, node, "MEDICINE_DISPENSE", f"Dispensed prescription ID {target_rx['prescription_id']} locally.")
