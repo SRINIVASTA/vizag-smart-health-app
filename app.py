@@ -284,43 +284,67 @@ else:
         st.header("Clinical Triage Portal")
         conn = sqlite3.connect("smart_health.db")
         
-        docs_df = pd.read_sql_query("SELECT doctor_name, specialization, active_status FROM doctors WHERE node_id = ?", conn, params=(node,))
-        st.dataframe(docs_df)
+        # Fetch active doctors for the select list mapping box
+        docs_query = conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (node,)).fetchall()
+        available_doctors = [d[0] for d in docs_query] if docs_query else ["General OPD Pool"]
         
-        st.subheader("Patient Intake Logger")
-        p_phone = st.text_input("Patient Contact Mobile Link", value="+91")
-        aadhaar = st.text_input("Secure Aadhaar Entry")
-        symptoms = st.text_area("Log Symptoms Profile Data")
-        
-        if st.button("Submit Triage Logs & Open Session"):
-            if len(aadhaar) == 12 and symptoms:
-                token_id = f"AP-{datetime.datetime.now().strftime('%M%S')}"
-                conn.execute("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, 'WAITING')", (token_id, node, hash(aadhaar), p_phone, symptoms))
-                conn.commit()
-                log_transaction(role, node, "PATIENT_INTAKE", f"Logged triage token {token_id}")
+        # 🎒 BRANCH 2A: UNIQUE PATH IF LOGGED IN AS ASHA WORKER (Intake Logger with Doctor Assignment)
+        if role == "ASHA Community Worker":
+            st.subheader("Patient Intake Logger & Doctor Assignment")
+            st.caption("Register citizens and triage select routing to on-shift medical practitioners.")
+            
+            p_phone = st.text_input("Patient Contact Mobile Link (WhatsApp Enabled)", value="+91")
+            aadhaar = st.text_input("Secure Aadhaar Entry (12 Digits)")
+            
+            # 🎯 RESOLVED: Interactive Dropdown allowing ASHA to assign the case directly to an available doctor
+            assigned_doctor = st.selectbox("Assign Target Medical Practitioner / Doctor", available_doctors)
+            symptoms = st.text_area("Log Symptoms Profile Data")
+            
+            if st.button("Submit Triage Logs & Assign Case"):
+                if len(aadhaar) == 12 and symptoms:
+                    token_id = f"AP-{datetime.datetime.now().strftime('%M%S')}"
+                    
+                    # Store data fields with explicit doctor routing context appended to descriptions
+                    combined_symptoms_log = f"Assigned to: {assigned_doctor} | Symptoms: {symptoms}"
+                    
+                    conn.execute("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, 'WAITING')", 
+                                 (token_id, node, str(hash(aadhaar)), p_phone, combined_symptoms_log))
+                    conn.commit()
+                    log_transaction(role, node, "PATIENT_INTAKE", f"ASHA created token {token_id} assigned to {assigned_doctor}")
+                    st.success(f"🎉 Patient Registered Successfully! Token Issued: **{token_id}** and routed cleanly to **{assigned_doctor}**.")
+                else:
+                    st.error("Invalid formatting requirements. Ensure Aadhaar is exactly 12 digits.")
+
+        # 🩺 BRANCH 2B: UNIQUE PATH IF LOGGED IN AS CHC MEDICAL PRACTITIONER (Doctor Queue Portal)
+        elif role == "CHC Medical Practitioner":
+            st.subheader("Personal Triage Consultation Queue")
+            
+            # Read only waiting patient lists from database
+            queue_df = pd.read_sql_query("SELECT token_id, patient_phone, symptoms_logged FROM patient_triage_queue WHERE node_id=? AND status='WAITING'", conn, params=(node,))
+            st.dataframe(queue_df)
+            
+            if not queue_df.empty:
+                # Target first patient in the database index row
+                target_patient = queue_df.iloc[0]
+                whatsapp_link = build_esanjeevani_routing_gateway(target_patient['patient_phone'], "Active Assigned Duty Doctor")
                 
-                if not docs_df.empty:
-                    whatsapp_link = build_esanjeevani_routing_gateway(p_phone, docs_df.iloc[0]['doctor_name'])
-                    st.success(f"Patient Added! Token Issued: **{token_id}**")
-                    st.link_button("📞 Launch Instant Telehealth Session", whatsapp_link, type="primary")
-            else:
-                st.error("Invalid formatting requirements.")
+                st.info(f"👉 **Processing Case Key**: {target_patient['token_id']} | {target_patient['symptoms_logged']}")
+                st.link_button("📞 Launch Instant Telehealth Video Consultation", whatsapp_link, type="primary")
                 
-        # Renders the high-density patient history logs inside the clinician portal
+                if st.button("✅ Complete Session & Advance Queue"):
+                    conn.execute("UPDATE patient_triage_queue SET status='COMPLETED' WHERE token_id=?", (target_patient['token_id'],))
+                    conn.commit()
+                    log_transaction(role, node, "TELEHEALTH_CALL", f"Completed session for {target_patient['token_id']}")
+                    st.success("Session saved.")
+                    st.rerun()
+                    
+        # Renders the high-density historical registries below forms
         st.markdown("---")
         st.subheader("📚 Historical Patient Electronic Health Records (EHR Ledger)")
-        st.caption("Displaying recent cross-mandal historical cases registered at this hub.")
-        
-        history_df = pd.read_sql_query("""
-            SELECT token_id, symptoms_logged as 'Demographics & Symptoms Profile', status as 'Care Status' 
-            FROM patient_triage_queue 
-            WHERE node_id = ? AND status = 'COMPLETED' 
-            LIMIT 100
-        """, conn, params=(node,))
+        history_df = pd.read_sql_query("SELECT token_id, symptoms_logged as 'Demographics & Symptoms Profile', status as 'Care Status' FROM patient_triage_queue WHERE node_id = ? AND status = 'COMPLETED' LIMIT 100", conn, params=(node,))
         
         if not history_df.empty:
             st.dataframe(history_df, use_container_width=True)
-            st.caption(f"Showing {len(history_df)} processed historical patient case registries.")
         else:
             st.info("No historical case records found for this specific facility node context.")
         conn.close()
