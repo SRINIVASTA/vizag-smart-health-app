@@ -145,6 +145,8 @@ if not st.session_state.authenticated:
     ln = LOCALIZATION_DATA[st.session_state.current_lang]
     
     conn = sqlite3.connect("smart_health.db")
+    
+    # Extract string values safely out of the 1-element tuples from SQLite
     dist_list = [row[0] for row in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
     chosen_district = st.sidebar.selectbox(ln["select_district"], dist_list)
     
@@ -158,7 +160,7 @@ if not st.session_state.authenticated:
     chosen_facility_name = st.sidebar.selectbox(ln["select_facility"], list(facility_map.keys()))
     target_node_id = facility_map[chosen_facility_name]
     
-    # Fetch personnel details securely
+    # Fetch personnel details securely and extract string elements out of single-item tuples
     doc_rows = [r[0] for r in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
     asha_rows = {r[0]: r[1] for r in conn.execute("SELECT username, worker_name FROM asha_workers WHERE node_id = ?", (target_node_id,)).fetchall()}
     pharma_rows = {r[0]: r[1] for r in conn.execute("SELECT username, employee_name FROM pharmacists WHERE node_id = ?", (target_node_id,)).fetchall()}
@@ -186,7 +188,7 @@ if not st.session_state.authenticated:
     username_options = list(UI_ROLE_NAME_MAP.values())
     selected_ui_name = st.selectbox(ln["username"], username_options)
     
-    # FIX: Explicitly extract index 0 string out of list comprehension array match to fix type casting bugs
+    # Corrected: Safely extract the matching string using list comprehension item extraction [0]
     user_in_list = [k for k, v in UI_ROLE_NAME_MAP.items() if v == selected_ui_name]
     user_in = user_in_list[0] if user_in_list else "unknown"
     pass_in = st.text_input(ln["password"], type="password")
