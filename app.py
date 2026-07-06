@@ -23,7 +23,7 @@ from src.telehealth import build_esanjeevani_routing_gateway
 def init_ap_pilot_db():
     db_file = "smart_health.db"
     
-    # 🎯 FIX: Force-remove the database file via native OS if it is old/incomplete to prevent SQLite thread locks
+    # Force-remove the database file via native OS if it is old/incomplete to prevent SQLite locks
     if os.path.exists(db_file):
         try:
             conn_test = sqlite3.connect(db_file)
@@ -59,20 +59,20 @@ def init_ap_pilot_db():
     
     cursor.execute("SELECT COUNT(*) FROM administrative_hierarchy;")
     if cursor.fetchone()[0] == 0:
-        # 🏥 FRESH SEEDING INJECTION: 10 AP Pilot Health Facilities balanced across all 3 Districts
+        # FRESH SEEDING INJECTION: 10 AP Pilot Health Facilities balanced across all 3 Districts
         nodes = [
-            # 📍 District 1: Visakhapatnam
+            # District 1: Visakhapatnam
             ("IN-AP-VSP-PND", "Tehsil", "Pendurthi CHC Hub", "Andhra Pradesh", "Visakhapatnam", 17.8344, 83.2014),
             ("IN-AP-VSP-BHM", "Tehsil", "Bheemili Hospital Spoke", "Andhra Pradesh", "Visakhapatnam", 17.8903, 83.4447),
             ("IN-AP-VSP-GJV", "Tehsil", "Gajuwaka Industrial PHC", "Andhra Pradesh", "Visakhapatnam", 17.6896, 83.2089),
             ("IN-AP-VSP-ANA", "Tehsil", "Anakapalle Referral CHC", "Andhra Pradesh", "Visakhapatnam", 17.6895, 83.0024),
             
-            # 📍 District 2: Vizianagaram
+            # District 2: Vizianagaram
             ("IN-AP-VZM-GJM", "Tehsil", "Gajapathinagaram PHC", "Andhra Pradesh", "Vizianagaram", 18.2750, 83.3314),
             ("IN-AP-VZM-CHB", "Tehsil", "Cheepurupalli Spoke CHC", "Andhra Pradesh", "Vizianagaram", 18.3094, 83.5656),
             ("IN-AP-VZM-SKR", "Tehsil", "Sravankota Rural PHC", "Andhra Pradesh", "Vizianagaram", 18.4210, 83.4110),
             
-            # 📍 District 3: Srikakulam
+            # District 3: Srikakulam
             ("IN-AP-SKL-RUR", "Tehsil", "Srikakulam Rural Health Center", "Andhra Pradesh", "Srikakulam", 18.2949, 83.8938),
             ("IN-AP-SKL-PLM", "Tehsil", "Palasa Super-Specialty Spoke", "Andhra Pradesh", "Srikakulam", 18.7702, 84.4178),
             ("IN-AP-SKL-TKK", "Tehsil", "Tekkali Area Referral CHC", "Andhra Pradesh", "Srikakulam", 18.6134, 84.2324)
@@ -118,11 +118,18 @@ def init_ap_pilot_db():
         for i in range(1, 101):
             token_id = f"AP-SEED-{1000 + i}"
             selected_node = random.choice(nodes)
+            
+            # 🎯 FIX: Explicitly target selected_node[0] to insert the string ID instead of the whole tuple
+            node_id_str = selected_node[0] 
+            
             p_name = f"{random.choice(['Ramesh', 'Suresh', 'Venkat', 'Chiranjeevi', 'Anitha', 'Lakshmi'])} {random.choice(['Pilla', 'Kona', 'Ganti', 'Reddy', 'Allu'])}"
             aadhaar_mock = str(random.randint(100000000000, 999999999999))
             phone_mock = f"+919{random.randint(10000000, 99999999)}"
             logged_symptoms = random.choice(["High Fever, Continuous Dry Cough", "Acute Diarrhea, Dehydration", "Persistent Dry Cough, Sore Throat"])
-            patient_records.append((token_id, selected_node, str(hash(aadhaar_mock)), phone_mock, f"Patient: {p_name} | {logged_symptoms}", "COMPLETED"))
+            
+            # Pass node_id_str into the parameters array list securely
+            patient_records.append((token_id, node_id_str, str(hash(aadhaar_mock)), phone_mock, f"Patient: {p_name} | {logged_symptoms}", "COMPLETED"))
+            
         cursor.executemany("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, ?);", patient_records)
         
         cursor.executemany("INSERT INTO node_operations VALUES (?, ?, ?, ?);", [
