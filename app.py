@@ -30,7 +30,6 @@ def init_ap_pilot_db():
     cursor.execute("CREATE TABLE IF NOT EXISTS inventory (node_id TEXT, item_name TEXT, current_stock INT, min_required_threshold INT, daily_avg_consumption REAL, PRIMARY KEY (node_id, item_name));")
     cursor.execute("CREATE TABLE IF NOT EXISTS patient_triage_queue (token_id TEXT PRIMARY KEY, node_id TEXT, aadhaar_hash TEXT, patient_phone TEXT, symptoms_logged TEXT, status TEXT);")
     
-    # RELATIONAL PRESCRIPTIONS TABLE
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS patient_prescriptions (
         prescription_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,20 +41,27 @@ def init_ap_pilot_db():
     
     cursor.execute("SELECT COUNT(*) FROM administrative_hierarchy;")
     if cursor.fetchone() == 0:
+        # 🏥 SEED 1: 10 AP Pilot Health Facilities balanced across all 3 Districts
         nodes = [
+            # 📍 District 1: Visakhapatnam
             ("IN-AP-VSP-PND", "Tehsil", "Pendurthi CHC Hub", "Andhra Pradesh", "Visakhapatnam", 17.8344, 83.2014),
             ("IN-AP-VSP-BHM", "Tehsil", "Bheemili Hospital Spoke", "Andhra Pradesh", "Visakhapatnam", 17.8903, 83.4447),
             ("IN-AP-VSP-GJV", "Tehsil", "Gajuwaka Industrial PHC", "Andhra Pradesh", "Visakhapatnam", 17.6896, 83.2089),
             ("IN-AP-VSP-ANA", "Tehsil", "Anakapalle Referral CHC", "Andhra Pradesh", "Visakhapatnam", 17.6895, 83.0024),
+            
+            # 📍 District 2: Vizianagaram
             ("IN-AP-VZM-GJM", "Tehsil", "Gajapathinagaram PHC", "Andhra Pradesh", "Vizianagaram", 18.2750, 83.3314),
             ("IN-AP-VZM-CHB", "Tehsil", "Cheepurupalli Spoke CHC", "Andhra Pradesh", "Vizianagaram", 18.3094, 83.5656),
             ("IN-AP-VZM-SKR", "Tehsil", "Sravankota Rural PHC", "Andhra Pradesh", "Vizianagaram", 18.4210, 83.4110),
+            
+            # 📍 District 3: Srikakulam
             ("IN-AP-SKL-RUR", "Tehsil", "Srikakulam Rural Health Center", "Andhra Pradesh", "Srikakulam", 18.2949, 83.8938),
             ("IN-AP-SKL-PLM", "Tehsil", "Palasa Super-Specialty Spoke", "Andhra Pradesh", "Srikakulam", 18.7702, 84.4178),
             ("IN-AP-SKL-TKK", "Tehsil", "Tekkali Area Referral CHC", "Andhra Pradesh", "Srikakulam", 18.6134, 84.2324)
         ]
         cursor.executemany("INSERT INTO administrative_hierarchy VALUES (?, ?, ?, ?, ?, ?, ?);", nodes)
         
+        # 🩺 SEED 2: On-Duty Doctor Rosters for all 10 Facilities
         cursor.executemany("INSERT INTO doctors VALUES (?, ?, ?, ?, ?);", [
             ("DOC001", "IN-AP-VSP-PND", "Dr. S. Srinivasa Rao", "General Medicine", 1),
             ("DOC002", "IN-AP-VSP-PND", "Dr. K. Anuradha", "Gynaecology Specialist", 1),
@@ -69,42 +75,51 @@ def init_ap_pilot_db():
             ("DOC010", "IN-AP-SKL-PLM", "Dr. Y. Appala Naidu", "Nephrology Consultant", 1)
         ])
         
+        # 🎒 SEED 3: Local ASHA Workers distributed across all 3 Districts
         cursor.executemany("INSERT INTO asha_workers VALUES (?, ?, ?, ?, ?);", [
             ("ASHA001", "IN-AP-VSP-PND", "asha_worker", "Smt. T. Appalanamma", "Pendurthi Sector 1"),
-            ("ASHA002", "IN-AP-VSP-PND", "asha_gorapalli", "Smt. K. Satyavathi", "Gorapalli Village"),
-            ("ASHA003", "IN-AP-VSP-BHM", "asha_bheemili", "Smt. G. Lakshmi", "Bheemili Coastal Zone")
+            ("ASHA002", "IN-AP-VZM-GJM", "asha_gajapathinagaram", "Smt. D. Parvathi", "Gajapathinagaram Ward 4"),
+            ("ASHA003", "IN-AP-SKL-RUR", "asha_srikakulam", "Smt. K. Chittemma", "Srikakulam River Block")
         ])
 
+        # 💊 SEED 4: Local Pharmacist Managers distributed across all 3 Districts
         cursor.executemany("INSERT INTO pharmacists VALUES (?, ?, ?, ?);", [
             ("PHM001", "IN-AP-VSP-PND", "pharma_person", "Sri K. Jagannadham"),
-            ("PHM002", "IN-AP-VSP-BHM", "pharma_bheemili", "Sri G. Anand Kumar")
+            ("PHM002", "IN-AP-VZM-GJM", "pharma_gajapathinagaram", "Sri R. K. Prasad"),
+            ("PHM003", "IN-AP-SKL-RUR", "pharma_srikakulam_rur", "Sri B. Krishna")
         ])
         
+        # 📦 SEED 5: Pharmacy Inventory Profiles distributed across all 3 Districts
         cursor.executemany("INSERT INTO inventory VALUES (?, ?, ?, ?, ?);", [
             ("IN-AP-VSP-PND", "Anti-Viral Medical Kits", 5, 200, 12.5),
             ("IN-AP-VSP-PND", "Paracetamol 500mg Tab", 450, 2000, 150.0),
-            ("IN-AP-VSP-BHM", "Anti-Viral Medical Kits", 1800, 300, 22.0)
+            ("IN-AP-VSP-BHM", "Anti-Viral Medical Kits", 1800, 300, 22.0),
+            ("IN-AP-VZM-GJM", "Basic Diagnostic Strips", 12, 100, 14.5),
+            ("IN-AP-VZM-CHB", "Paracetamol 500mg Tab", 50, 1500, 110.0),
+            ("IN-AP-SKL-RUR", "Anti-Viral Medical Kits", 450, 100, 15.0),
+            ("IN-AP-SKL-PLM", "Emergency Medical Kit A", 3, 25, 2.8)
         ])
         
-        # SEEDING 100 HISTORICAL PATIENTS
+        # 👤 SEED 6: AUTOMATED 100-PATIENT TRIAGE ENGINE DISTRIBUTED ACROSS ALL DISTRICT FACILITIES
         first_names = ["Ramesh", "Suresh", "Venkat", "Chiranjeevi", "Naidu", "Satish", "Anitha", "Lakshmi", "Durga", "Rama"]
         last_names = ["Pilla", "Kona", "Ganti", "Vanka", "Reddy", "Allu", "Yerra", "Boni", "Koppula", "Myla"]
         symptom_pool = ["High Fever, Continuous Dry Cough", "Acute Diarrhea, Dehydration", "Persistent Dry Cough, Sore Throat"]
         patient_records = []
         for i in range(1, 101):
             token_id = f"AP-SEED-{1000 + i}"
-            selected_node = random.choice(nodes)
+            selected_node = random.choice(nodes) # Randomly allocates patients into all 3 districts
             p_name = f"{random.choice(first_names)} {random.choice(last_names)}"
             aadhaar_mock = str(random.randint(100000000000, 999999999999))
             phone_mock = f"+919{random.randint(10000000, 99999999)}"
             logged_symptoms = random.choice(symptom_pool)
-            patient_records.append((token_id, selected_node, str(hash(aadhaar_mock)), phone_mock, f"Patient: {p_name} | {logged_symptoms}", "COMPLETED"))
+            patient_records.append((token_id, selected_node[0], str(hash(aadhaar_mock)), phone_mock, f"Patient: {p_name} | {logged_symptoms}", "COMPLETED"))
         cursor.executemany("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, ?);", patient_records)
         
+        # 📊 SEED 7: Balanced Operational Metric Blocks for all 10 Facilities across 3 Districts
         cursor.executemany("INSERT INTO node_operations VALUES (?, ?, ?, ?);", [
-            ("IN-AP-VSP-PND", 40, 35, 0.88), ("IN-AP-VSP-BHM", 30, 5, 0.12), ("IN-AP-VSP-GJV", 25, 20, 0.35),
-            ("IN-AP-VSP-ANA", 50, 42, 0.65), ("IN-AP-VZM-GJM", 15, 2, 0.42), ("IN-AP-VZM-CHB", 20, 18, 0.11),
-            ("IN-AP-VZM-SKR", 10, 9, 0.73), ("IN-AP-SKL-RUR", 20, 18, 0.76), ("IN-AP-SKL-PLM", 35, 30, 0.22), ("IN-AP-SKL-TKK", 30, 12, 0.05)
+            ("IN-AP-VSP-PND", 40, 35, 0.88), ("IN-AP-VSP-BHM", 30, 5, 0.12), ("IN-AP-VSP-GJV", 25, 20, 0.35), ("IN-AP-VSP-ANA", 50, 42, 0.65), 
+            ("IN-AP-VZM-GJM", 15, 2, 0.42), ("IN-AP-VZM-CHB", 20, 18, 0.11), ("IN-AP-VZM-SKR", 10, 9, 0.73), 
+            ("IN-AP-SKL-RUR", 20, 18, 0.76), ("IN-AP-SKL-PLM", 35, 30, 0.22), ("IN-AP-SKL-TKK", 30, 12, 0.05)
         ])
     conn.commit()
     conn.close()
