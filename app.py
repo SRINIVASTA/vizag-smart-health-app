@@ -145,19 +145,29 @@ if not st.session_state.authenticated:
     ln = LOCALIZATION_DATA[st.session_state.current_lang]
     
     conn = sqlite3.connect("smart_health.db")
-    dist_list = [row for row in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
+    
+    # 🎯 FIX 1: Explicitly force row string list conversion to eliminate nested tuple wrappers
+    dist_query = conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()
+    dist_list = [str(row[0]) for row in dist_query] if dist_query else ["Visakhapatnam"]
+    
     chosen_district = st.sidebar.selectbox(ln["select_district"], dist_list)
     st.session_state.selected_district = chosen_district
     
-    fac_cursor = conn.execute("SELECT node_name, node_id FROM administrative_hierarchy WHERE district_name = ?", (chosen_district,)).fetchall()
-    facility_map = {node_name: node_id for node_name, node_id in fac_cursor}
+    # 🎯 FIX 2: Safely pass the clean unpacked string parameter directly into the SQL conditional bindings array
+    fac_cursor = conn.execute("SELECT node_name, node_id FROM administrative_hierarchy WHERE district_name = ?", (str(chosen_district),)).fetchall()
+    
+    if fac_cursor:
+        facility_map = {str(node_name): str(node_id) for node_name, node_id in fac_cursor}
+    else:
+        facility_map = {"No Facilities Found": "NONE"}
+        
     chosen_facility_name = st.sidebar.selectbox(ln["select_facility"], list(facility_map.keys()))
     target_node_id = facility_map[chosen_facility_name]
     
-    # Fetch personnel details securely and extract string elements safely
-    doc_rows = [r for r in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
-    asha_rows = {r: r for r in conn.execute("SELECT username, worker_name FROM asha_workers WHERE node_id = ?", (target_node_id,)).fetchall()}
-    pharma_rows = {r: r for r in conn.execute("SELECT username, employee_name FROM pharmacists WHERE node_id = ?", (target_node_id,)).fetchall()}
+    # Fetch local personnel rosters matching the active facility context and unpack single column strings safely
+    doc_rows = [str(r[0]) for r in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
+    asha_rows = {str(u): str(n) for u, n in conn.execute("SELECT username, worker_name FROM asha_workers WHERE node_id = ?", (target_node_id,)).fetchall()}
+    pharma_rows = {str(u): str(n) for u, n in conn.execute("SELECT username, employee_name FROM pharmacists WHERE node_id = ?", (target_node_id,)).fetchall()}
     conn.close()
     
     st.sidebar.markdown(f"**🩺 Connected On-Duty Clinicians:**")
@@ -170,7 +180,7 @@ if not st.session_state.authenticated:
     st.title(ln["login_title"])
     st.caption(f"{ln['login_sub']} | Routing Target: `{target_node_id}`")
     
-    # Render visible, human-readable display list inside select box mapping accounts cleanly
+    # Render visible, human-readable display list inside select box mapping accounts cleanly from USER_REGISTRY keys
     username_options = list(USER_REGISTRY.keys())
     user_in = st.selectbox(ln["username"], username_options)
     pass_in = st.text_input(ln["password"], type="password")
@@ -180,8 +190,14 @@ if not st.session_state.authenticated:
             st.session_state.authenticated = True
             st.session_state.user_role = USER_REGISTRY[user_in]["role"]
             st.session_state.node_id = target_node_id
-            st.session_state.user_home_district = USER_REGISTRY[user_in]["home_district"]
             
+            # Map home district configuration matrices safely
+            home_dist = USER_REGISTRY[user_in]["home_district"]
+            if home_dist == "All" or home_dist == "Dynamic":
+                st.session_state.user_home_district = chosen_district
+            else:
+                st.session_state.user_home_district = home_dist
+                
             log_transaction(st.session_state.user_role, st.session_state.node_id, "LOGIN", f"User {user_in} logged into district context.")
             st.rerun()
         else:
