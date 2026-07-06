@@ -376,4 +376,4 @@ else:
                 target_rx = rx_df.iloc[0]
                 if st.button(f"💊 One-Click Dispense Prescription for Token {target_rx['token_id']}"):
                     conn.execute("UPDATE inventory SET current_stock = current_stock - 1 WHERE node_id=? AND item_name=?", (node, target_rx['prescribed_medicine']))
-                    conn.execute("UPDATE patient_prescriptions SET status='DISPENSED' WHERE prescription_id=?", (target_rx['prescription_id'],
+                    conn.execute("UPDATE patient_prescriptions SET status='DISPENSED' WHERE prescription_id=?", (target_rx['prescription_id'],)
