@@ -1,3 +1,19 @@
+# Local Database Storage (Generated out of thin air on Streamlit cloud startup)
 *.db
+*.sqlite3
+
+# Exported Audit Ledgers / Patient Reports (Contains sensitive data)
 *.csv
+
+# Python Compilation Cache (Pollutes Git history log)
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Streamlit Local Context Cache
+.streamlit/runtime/
+
+# Operating System Files
+.DS_Store
+Thumbs.db
