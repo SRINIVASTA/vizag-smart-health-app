@@ -78,13 +78,11 @@ if not st.session_state.authenticated:
     
     conn = sqlite3.connect("smart_health.db")
     
-    # FIX 1: Extract string fields cleanly out of single-element tuples using row[0]
     dist_list = [row[0] for row in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
     chosen_district = st.sidebar.selectbox(ln["select_district"], dist_list)
     
     fac_cursor = conn.execute("SELECT node_name, node_id FROM administrative_hierarchy WHERE district_name = ?", (chosen_district,)).fetchall()
     
-    # FIX 2: Check if database query returned records to prevent an empty dictionary crash
     if fac_cursor:
         facility_map = {name: node_id for name, node_id in fac_cursor}
     else:
@@ -105,7 +103,11 @@ if not st.session_state.authenticated:
 
     st.title(ln["login_title"])
     st.caption(f"{ln['login_sub']} | Routing Target: `{target_node_id}`")
-    user_in = st.text_input(ln["username"])
+    
+    # 🎯 CONVERTED: Username entry field transformed into a selection dropdown list
+    username_options = list(USER_REGISTRY.keys())
+    user_in = st.selectbox(ln["username"], username_options)
+    
     pass_in = st.text_input(ln["password"], type="password")
     
     if st.button(ln["btn_login"]):
@@ -113,10 +115,10 @@ if not st.session_state.authenticated:
             st.session_state.authenticated = True
             st.session_state.user_role = USER_REGISTRY[user_in]["role"]
             st.session_state.node_id = target_node_id
-            log_transaction(st.session_state.user_role, st.session_state.node_id, "LOGIN", "Logged into Andhra Pradesh pilot matrix.")
+            log_transaction(st.session_state.user_role, st.session_state.node_id, "LOGIN", "Logged into Andhra Pradesh pilot matrix via selectbox.")
             st.rerun()
         else:
-            st.error("Invalid Credentials / తప్పుడు వివరాలు")
+            st.error("Invalid Security Token / తప్పుడు పాస్‌వర్డ్")
 # ==========================================
 # AUTHENTICATED SYSTEM ENVIRONMENT ROUTER
 # ==========================================
