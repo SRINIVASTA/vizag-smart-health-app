@@ -134,6 +134,8 @@ if "authenticated" not in st.session_state: st.session_state.authenticated = Fal
 if "user_role" not in st.session_state: st.session_state.user_role = None
 if "node_id" not in st.session_state: st.session_state.node_id = None
 if "current_lang" not in st.session_state: st.session_state.current_lang = "en"
+if "user_home_district" not in st.session_state: st.session_state.user_home_district = None
+if "selected_district" not in st.session_state: st.session_state.selected_district = None
 
 if not st.session_state.authenticated:
     st.sidebar.markdown("### 🗺️ Pilot Location Router")
@@ -143,18 +145,19 @@ if not st.session_state.authenticated:
     ln = LOCALIZATION_DATA[st.session_state.current_lang]
     
     conn = sqlite3.connect("smart_health.db")
-    dist_list = [row for row, in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
+    dist_list = [row for row in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
     chosen_district = st.sidebar.selectbox(ln["select_district"], dist_list)
+    st.session_state.selected_district = chosen_district
     
     fac_cursor = conn.execute("SELECT node_name, node_id FROM administrative_hierarchy WHERE district_name = ?", (chosen_district,)).fetchall()
     facility_map = {node_name: node_id for node_name, node_id in fac_cursor}
     chosen_facility_name = st.sidebar.selectbox(ln["select_facility"], list(facility_map.keys()))
     target_node_id = facility_map[chosen_facility_name]
     
-    # Fetch local personnel rosters matching the active facility context
-    doc_rows = [r for r, in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
-    asha_rows = {u: n for u, n in conn.execute("SELECT username, worker_name FROM asha_workers WHERE node_id = ?", (target_node_id,)).fetchall()}
-    pharma_rows = {u: n for u, n in conn.execute("SELECT username, employee_name FROM pharmacists WHERE node_id = ?", (target_node_id,)).fetchall()}
+    # Fetch personnel details securely and extract string elements safely
+    doc_rows = [r for r in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
+    asha_rows = {r: r for r in conn.execute("SELECT username, worker_name FROM asha_workers WHERE node_id = ?", (target_node_id,)).fetchall()}
+    pharma_rows = {r: r for r in conn.execute("SELECT username, employee_name FROM pharmacists WHERE node_id = ?", (target_node_id,)).fetchall()}
     conn.close()
     
     st.sidebar.markdown(f"**🩺 Connected On-Duty Clinicians:**")
@@ -167,39 +170,22 @@ if not st.session_state.authenticated:
     st.title(ln["login_title"])
     st.caption(f"{ln['login_sub']} | Routing Target: `{target_node_id}`")
     
-    # 🎯 DISPLAY COMPREHENSIVE ALIGNED USERNAME DROP-DOWN
-    UI_ROLE_NAME_MAP = {
-        "ap_state_admin": "State Surveillance Administrator",
-        "district_officer": "District Officer"
-    }
-    # Dynamically bind clinical employees to the selection list arrays
-    for d in doc_rows: UI_ROLE_NAME_MAP[d] = f"Doctor: {d}"
-    for u, n in asha_rows.items(): UI_ROLE_NAME_MAP[u] = f"ASHA Worker: {n} ({u})"
-    for u, n in pharma_rows.items(): UI_ROLE_NAME_MAP[u] = f"Pharmacist: {n} ({u})"
-    
-    username_options = list(UI_ROLE_NAME_MAP.values())
-    selected_ui_name = st.selectbox(ln["username"], username_options)
-    
-    user_in_list = [k for k, v in UI_ROLE_NAME_MAP.items() if v == selected_ui_name]
-    user_in = user_in_list[0] if user_in_list else "unknown"
+    # Render visible, human-readable display list inside select box mapping accounts cleanly
+    username_options = list(USER_REGISTRY.keys())
+    user_in = st.selectbox(ln["username"], username_options)
     pass_in = st.text_input(ln["password"], type="password")
     
     if st.button(ln["btn_login"]):
-        is_authenticated = False
-        resolved_role = ""
-        
         if user_in in USER_REGISTRY and USER_REGISTRY[user_in]["password"] == pass_in:
-            is_authenticated = True
-            resolved_role = USER_REGISTRY[user_in]["role"]
-            
-        if is_authenticated:
             st.session_state.authenticated = True
-            st.session_state.user_role = resolved_role
+            st.session_state.user_role = USER_REGISTRY[user_in]["role"]
             st.session_state.node_id = target_node_id
-            log_transaction(st.session_state.user_role, st.session_state.node_id, "LOGIN", f"User account [{user_in}] authenticated successfully.")
+            st.session_state.user_home_district = USER_REGISTRY[user_in]["home_district"]
+            
+            log_transaction(st.session_state.user_role, st.session_state.node_id, "LOGIN", f"User {user_in} logged into district context.")
             st.rerun()
         else:
-            st.error("Invalid Credentials for selected workspace profile / తప్పుడు పాస్‌వర్డ్")
+            st.error("Invalid Credentials / తప్పుడు పాస్‌వర్డ్")
 # ==========================================
 # ADMINISTRATIVE TIERS HUB VIEW
 # ==========================================
@@ -207,7 +193,9 @@ else:
     ln = LOCALIZATION_DATA[st.session_state.current_lang]
     role = st.session_state.user_role
     node = st.session_state.node_id
-    
+    home_dist = st.session_state.user_home_district
+    curr_dist = st.session_state.selected_district
+
     if st.sidebar.button(ln["btn_logout"]):
         log_transaction(role, node, "LOGOUT", "Session workspace cleanly terminated.")
         st.session_state.authenticated = False
@@ -222,20 +210,49 @@ else:
         st.header(ln["facility_status"])
         df_inv, transfers = run_cross_tier_supply_balancing()
         
+        # 🎯 SCOPE ENFORCEMENT MATRIX FOR NEW DISTRICT ACCOUNTS:
+        # If the logged-in user is a specialized District Officer, filter down data outputs strictly to their domain match pattern.
+        if role == "District Officer":
+            st.warning(f"📋 **District Officer Monitoring Active. Domain Scope Restriction**: `{home_dist}`")
+            df_inv = df_inv[df_inv['district_name'] == home_dist]
+            transfers = [t for t in transfers if t['to_node'].startswith(node)]
+        else:
+            st.success("👑 **State Surveillance Admin Mode Active: Tracking All District Matrices (Visakhapatnam, Vizianagaram, Srikakulam)**")
+            
         st.subheader("🚨 Outbreak Surveillance Tracker Logs")
         conn = sqlite3.connect("smart_health.db")
-        anomalies = pd.read_sql_query("SELECT h.node_name, o.active_epidemic_risk_score FROM node_operations o JOIN administrative_hierarchy h ON o.node_id = h.node_id WHERE o.active_epidemic_risk_score > 0.5", conn)
+        
+        if role == "District Officer":
+            anomalies = pd.read_sql_query("""
+                SELECT h.node_name, o.active_epidemic_risk_score 
+                FROM node_operations o 
+                JOIN administrative_hierarchy h ON o.node_id = h.node_id 
+                WHERE o.active_epidemic_risk_score > 0.5 AND h.district_name = ?
+            """, conn, params=(home_dist,))
+        else:
+            anomalies = pd.read_sql_query("""
+                SELECT h.node_name, o.active_epidemic_risk_score 
+                FROM node_operations o 
+                JOIN administrative_hierarchy h ON o.node_id = h.node_id 
+                WHERE o.active_epidemic_risk_score > 0.5
+            """, conn)
         conn.close()
         
-        for _, alert in anomalies.iterrows():
-            st.error(f"🔴 **CRITICAL OUTBREAK WARNING**: PHC Node `{alert['node_name']}` has triggered an epidemic warning score of **{alert['active_epidemic_risk_score']}**! Dispatch response teams.")
+        if not anomalies.empty:
+            for _, alert in anomalies.iterrows():
+                st.error(f"🔴 **CRITICAL OUTBREAK WARNING**: PHC Node `{alert['node_name']}` has triggered an epidemic warning score of **{alert['active_epidemic_risk_score']}**!")
+        else:
+            st.success("No critical syndromic outbreak alerts reported within your jurisdiction scope.")
         
         # Matplotlib Rendering Framework Hooks
         st.markdown("---")
         st.subheader("📊 Executive Data Visualizations (Matplotlib Renderers)")
         col1, col2 = st.columns(2)
         with col1:
-            st.pyplot(generate_stock_prediction_chart(df_inv))
+            if not df_inv.empty:
+                st.pyplot(generate_stock_prediction_chart(df_inv))
+            else:
+                st.info("No stock data available for the targeted filtering parameters.")
         with col2:
             st.pyplot(generate_epidemic_risk_chart())
         st.markdown("---")
@@ -249,89 +266,16 @@ else:
                     st.success("Logistics dispatch active.")
             st.map(map_cross_tier_drone_grid(transfers))
         else:
-            st.success("All pilot health inventory assets balanced smoothly.")
+            st.success("All local area health inventory assets balanced smoothly.")
 
+        # Protected Compliance Ledger Review Screen
         st.markdown("---")
         st.header("🔒 Integrated Action Ledger (Admin-Eyes Only)")
         conn = sqlite3.connect("smart_health.db")
-        st.dataframe(pd.read_sql_query("SELECT timestamp, user_role, node_id, action_type, details FROM system_audit_logs ORDER BY timestamp DESC", conn), use_container_width=True)
-        conn.close()
-# ==========================================
-# FRONTLINE CLINICAL & PHARMACY ENVIRONMENT
-# ==========================================
-    elif role in ["CHC Medical Practitioner", "ASHA Community Worker"]:
-        st.header("Clinical Triage Portal")
-        conn = sqlite3.connect("smart_health.db")
-        
-        docs_query = [d for d, in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (node,)).fetchall()]
-        available_doctors = docs_query if docs_query else ["General OPD Pool"]
-        
-        # ASHA Worker Triage Intake Layer
-        if role == "ASHA Community Worker":
-            st.subheader("Patient Intake Logger & Case Coordinator")
-            asha_mode = st.radio("Select Active Screening Mode Context", ["In-Person Local Screening", "Remote Tele-Triage Ingestion"], horizontal=True)
-            
-            p_phone = st.text_input("Patient Contact Mobile Link (WhatsApp Enabled)", value="+91")
-            aadhaar = st.text_input("Secure Aadhaar Entry (12 Digits)")
-            assigned_doctor = st.selectbox("Assign Target Medical Practitioner / Doctor", available_doctors)
-            
-            if asha_mode == "In-Person Local Screening":
-                st.markdown("### 📋 Physical Screening Vitals Grid")
-                v_temp = st.number_input("Recorded Body Temperature (°F)", value=98.6)
-                v_pulse = st.number_input("Pulse Rate (BPM)", value=72)
-                symptoms = st.text_area("Log Observed Physical Symptoms Profile Data")
-                combined_symptoms_log = f"[LOCAL OPD - Temp: {v_temp}F, Pulse: {v_pulse}] Assigned: {assigned_doctor} | Symptoms: {symptoms}"
-            else:
-                st.markdown("### 📲 Remote Telemedicine Referral Ingestion")
-                tele_notes = st.text_area("Enter Remote Symptoms / Preliminary Incident Complaints")
-                combined_symptoms_log = f"[REMOTE TELEMEDICINE] Assigned: {assigned_doctor} | Notes: {tele_notes}"
-                
-            if st.button("Submit Patient Case Logs"):
-                if len(aadhaar) == 12 and combined_symptoms_log:
-                    token_id = f"AP-{datetime.datetime.now().strftime('%M%S')}"
-                    conn.execute("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, 'WAITING')", (token_id, node, str(hash(aadhaar)), p_phone, combined_symptoms_log))
-                    conn.commit()
-                    log_transaction(role, node, "PATIENT_INTAKE", f"ASHA created token {token_id} under context: {asha_mode}")
-                    st.success(f"🎉 Patient Registered successfully under **{asha_mode}** context! Routed to **{assigned_doctor}**.")
-
-        # Doctor Queue Portal with Digital Prescribing
-        elif role == "CHC Medical Practitioner":
-            st.subheader("Personal Triage Consultation Queue")
-            doc_mode = st.radio("Set Doctor Active Duty Workspace Mode", ["Physical Local OPD Desk", "e-Sanjeevani Video Call Telehealth"], horizontal=True)
-            
-            queue_df = pd.read_sql_query("SELECT token_id, patient_phone, symptoms_logged FROM patient_triage_queue WHERE node_id=? AND status='WAITING'", conn, params=(node,))
-            st.dataframe(queue_df)
-            
-            if not queue_df.empty:
-                target_patient = queue_df.iloc[0]
-                st.info(f"👉 **Processing Case**: {target_patient['token_id']} | {target_patient['symptoms_logged']}")
-                
-                if doc_mode == "e-Sanjeevani Video Call Telehealth":
-                    whatsapp_link = build_esanjeevani_routing_gateway(target_patient['patient_phone'], "Active Assigned Duty Doctor")
-                    st.link_button("📞 Launch Instant Video Consultation Channel", whatsapp_link, type="primary")
-                
-                st.markdown("---")
-                st.subheader("💊 Formulate Digital Medical Prescription")
-                rx_med = st.selectbox("Select Core Medication", ["Anti-Viral Medical Kits", "Paracetamol 500mg Tab", "Amoxicillin 250mg Caps"])
-                rx_dosage = st.text_input("Dosage Instructions", value="1 tablet twice a day after meals for 5 days")
-                
-                if st.button("📝 Issue Prescription to Pharmacy"):
-                    conn.execute("""
-                        INSERT INTO patient_prescriptions (token_id, node_id, doctor_name, medication_name, dosage_instructions, consult_mode, status)
-                        VALUES (?, ?, ?, ?, ?, ?, 'PENDING')
-                    """, (target_patient['token_id'], node, "On-Duty Medical Practitioner", rx_med, rx_dosage, doc_mode))
-                    
-                    conn.execute("UPDATE patient_triage_queue SET status='COMPLETED' WHERE token_id=?", (target_patient['token_id'],))
-                    conn.commit()
-                    log_transaction(role, node, "PRESCRIPTION_ISSUE", f"Issued RX for {rx_med} under mode: {doc_mode}")
-                    st.success(f"Prescription securely transmitted to pharmacy ledger! Queue advanced.")
-                    st.rerun()
-                    
-        st.markdown("---")
-        st.subheader("📚 Historical Patient Electronic Health Records (EHR Ledger)")
-        history_df = pd.read_sql_query("SELECT token_id, symptoms_logged as 'Demographics & Symptoms Profile', status as 'Care Status' FROM patient_triage_queue WHERE node_id = ? AND status = 'COMPLETED' LIMIT 100", conn, params=(node,))
-        if not history_df.empty:
-            st.dataframe(history_df, use_container_width=True)
+        if role == "District Officer":
+            st.dataframe(pd.read_sql_query("SELECT timestamp, user_role, node_id, action_type, details FROM system_audit_logs WHERE node_id LIKE ? ORDER BY timestamp DESC", conn, params=(f"%{home_dist[:3].upper()}%",)), use_container_width=True)
+        else:
+            st.dataframe(pd.read_sql_query("SELECT timestamp, user_role, node_id, action_type, details FROM system_audit_logs ORDER BY timestamp DESC", conn), use_container_width=True)
         conn.close()
 
     # Pharmacy Fulfillment Deck
