@@ -145,7 +145,7 @@ if not st.session_state.authenticated:
     ln = LOCALIZATION_DATA[st.session_state.current_lang]
     
     conn = sqlite3.connect("smart_health.db")
-    dist_list = [row[0] for row in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
+    dist_list = [row for row in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
     chosen_district = st.sidebar.selectbox(ln["select_district"], dist_list)
     
     fac_cursor = conn.execute("SELECT node_name, node_id FROM administrative_hierarchy WHERE district_name = ?", (chosen_district,)).fetchall()
@@ -159,9 +159,9 @@ if not st.session_state.authenticated:
     target_node_id = facility_map[chosen_facility_name]
     
     # Fetch personnel details securely
-    doc_rows = [r[0] for r in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
-    asha_rows = {r[0]: r[1] for r in conn.execute("SELECT username, worker_name FROM asha_workers WHERE node_id = ?", (target_node_id,)).fetchall()}
-    pharma_rows = {r[0]: r[1] for r in conn.execute("SELECT username, employee_name FROM pharmacists WHERE node_id = ?", (target_node_id,)).fetchall()}
+    doc_rows = [r for r in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
+    asha_rows = {r: r for r in conn.execute("SELECT username, worker_name FROM asha_workers WHERE node_id = ?", (target_node_id,)).fetchall()}
+    pharma_rows = {r: r for r in conn.execute("SELECT username, employee_name FROM pharmacists WHERE node_id = ?", (target_node_id,)).fetchall()}
     conn.close()
     
     st.sidebar.markdown(f"**🩺 Connected On-Duty Clinicians:**")
@@ -186,8 +186,9 @@ if not st.session_state.authenticated:
     username_options = list(UI_ROLE_NAME_MAP.values())
     selected_ui_name = st.selectbox(ln["username"], username_options)
     
-    # FIX: Add [0] to extract the pure string out of the list comprehension array match
-    user_in = [k for k, v in UI_ROLE_NAME_MAP.items() if v == selected_ui_name][0]
+    # Extract string out of list comprehension array match
+    user_in_list = [k for k, v in UI_ROLE_NAME_MAP.items() if v == selected_ui_name]
+    user_in = user_in_list if user_in_list else "unknown"
     pass_in = st.text_input(ln["password"], type="password")
     
     if st.button(ln["btn_login"]):
