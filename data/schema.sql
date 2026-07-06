@@ -78,3 +78,15 @@ CREATE TABLE IF NOT EXISTS system_audit_logs (
     action_type TEXT,
     details TEXT
 );
+-- Unified Digital Prescription Order Tracking Matrix
+CREATE TABLE IF NOT EXISTS e_prescriptions (
+    prescription_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    token_id TEXT,
+    node_id TEXT,
+    doctor_name TEXT,
+    medicine_name TEXT,
+    dosage_instructions TEXT,
+    status TEXT DEFAULT 'PENDING', -- 'PENDING', 'DISPENSED'
+    FOREIGN KEY (token_id) REFERENCES patient_triage_queue(token_id)
+);
