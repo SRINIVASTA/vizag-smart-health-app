@@ -23,7 +23,7 @@ from src.telehealth import build_esanjeevani_routing_gateway
 def init_ap_pilot_db():
     db_file = "smart_health.db"
     
-    # Force-remove the database file via native OS if it is old/incomplete to prevent SQLite locks
+    # Check database status dynamically on startup to clear any legacy 1-district file blocks safely
     if os.path.exists(db_file):
         try:
             conn_test = sqlite3.connect(db_file)
@@ -31,11 +31,9 @@ def init_ap_pilot_db():
             cursor_test.execute("SELECT COUNT(DISTINCT district_name) FROM administrative_hierarchy;")
             count = cursor_test.fetchone()[0]
             conn_test.close()
-            # If the database doesn't have our 3 pilot districts, remove it cleanly to rebuild
             if count < 3:
                 os.remove(db_file)
         except Exception:
-            # Fallback if table doesn't exist yet
             pass
 
     conn = sqlite3.connect(db_file)
@@ -59,20 +57,15 @@ def init_ap_pilot_db():
     
     cursor.execute("SELECT COUNT(*) FROM administrative_hierarchy;")
     if cursor.fetchone()[0] == 0:
-        # FRESH SEEDING INJECTION: 10 AP Pilot Health Facilities balanced across all 3 Districts
+        # Seeding 10 health facilities across Visakhapatnam, Vizianagaram, and Srikakulam districts
         nodes = [
-            # District 1: Visakhapatnam
             ("IN-AP-VSP-PND", "Tehsil", "Pendurthi CHC Hub", "Andhra Pradesh", "Visakhapatnam", 17.8344, 83.2014),
             ("IN-AP-VSP-BHM", "Tehsil", "Bheemili Hospital Spoke", "Andhra Pradesh", "Visakhapatnam", 17.8903, 83.4447),
             ("IN-AP-VSP-GJV", "Tehsil", "Gajuwaka Industrial PHC", "Andhra Pradesh", "Visakhapatnam", 17.6896, 83.2089),
             ("IN-AP-VSP-ANA", "Tehsil", "Anakapalle Referral CHC", "Andhra Pradesh", "Visakhapatnam", 17.6895, 83.0024),
-            
-            # District 2: Vizianagaram
             ("IN-AP-VZM-GJM", "Tehsil", "Gajapathinagaram PHC", "Andhra Pradesh", "Vizianagaram", 18.2750, 83.3314),
             ("IN-AP-VZM-CHB", "Tehsil", "Cheepurupalli Spoke CHC", "Andhra Pradesh", "Vizianagaram", 18.3094, 83.5656),
             ("IN-AP-VZM-SKR", "Tehsil", "Sravankota Rural PHC", "Andhra Pradesh", "Vizianagaram", 18.4210, 83.4110),
-            
-            # District 3: Srikakulam
             ("IN-AP-SKL-RUR", "Tehsil", "Srikakulam Rural Health Center", "Andhra Pradesh", "Srikakulam", 18.2949, 83.8938),
             ("IN-AP-SKL-PLM", "Tehsil", "Palasa Super-Specialty Spoke", "Andhra Pradesh", "Srikakulam", 18.7702, 84.4178),
             ("IN-AP-SKL-TKK", "Tehsil", "Tekkali Area Referral CHC", "Andhra Pradesh", "Srikakulam", 18.6134, 84.2324)
@@ -117,19 +110,12 @@ def init_ap_pilot_db():
         patient_records = []
         for i in range(1, 101):
             token_id = f"AP-SEED-{1000 + i}"
-            selected_node = random.choice(nodes)
-            
-            # 🎯 FIX: Explicitly target selected_node[0] to insert the string ID instead of the whole tuple
-            node_id_str = selected_node[0] 
-            
+            selected_node = random.choice(nodes)[0] # Extract text string ID cleanly
             p_name = f"{random.choice(['Ramesh', 'Suresh', 'Venkat', 'Chiranjeevi', 'Anitha', 'Lakshmi'])} {random.choice(['Pilla', 'Kona', 'Ganti', 'Reddy', 'Allu'])}"
             aadhaar_mock = str(random.randint(100000000000, 999999999999))
             phone_mock = f"+919{random.randint(10000000, 99999999)}"
             logged_symptoms = random.choice(["High Fever, Continuous Dry Cough", "Acute Diarrhea, Dehydration", "Persistent Dry Cough, Sore Throat"])
-            
-            # Pass node_id_str into the parameters array list securely
-            patient_records.append((token_id, node_id_str, str(hash(aadhaar_mock)), phone_mock, f"Patient: {p_name} | {logged_symptoms}", "COMPLETED"))
-            
+            patient_records.append((token_id, selected_node, str(hash(aadhaar_mock)), phone_mock, f"Patient: {p_name} | {logged_symptoms}", "COMPLETED"))
         cursor.executemany("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, ?);", patient_records)
         
         cursor.executemany("INSERT INTO node_operations VALUES (?, ?, ?, ?);", [
@@ -157,24 +143,16 @@ if not st.session_state.authenticated:
     ln = LOCALIZATION_DATA[st.session_state.current_lang]
     
     conn = sqlite3.connect("smart_health.db")
-    
-    # 🎯 FIX: Changed 'row' to 'row[0]' to strip the tuple wrapping from SQLite query outputs completely
-    dist_list = [row[0] for row in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
+    dist_list = [row for row, in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
     chosen_district = st.sidebar.selectbox(ln["select_district"], dist_list)
     
-    # Cascade filters health facilities based strictly on the selected district string matching conditions
     fac_cursor = conn.execute("SELECT node_name, node_id FROM administrative_hierarchy WHERE district_name = ?", (chosen_district,)).fetchall()
-    
-    if fac_cursor:
-        facility_map = {node_name: node_id for node_name, node_id in fac_cursor}
-    else:
-        facility_map = {"No Facilities Found": "NONE"}
-        
+    facility_map = {node_name: node_id for node_name, node_id in fac_cursor}
     chosen_facility_name = st.sidebar.selectbox(ln["select_facility"], list(facility_map.keys()))
     target_node_id = facility_map[chosen_facility_name]
     
-    # Fetch local personnel rosters matching the active facility context and unpack single column tuples cleanly
-    doc_rows = [r[0] for r in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
+    # Fetch local personnel rosters matching the active facility context
+    doc_rows = [r for r, in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
     asha_rows = {u: n for u, n in conn.execute("SELECT username, worker_name FROM asha_workers WHERE node_id = ?", (target_node_id,)).fetchall()}
     pharma_rows = {u: n for u, n in conn.execute("SELECT username, employee_name FROM pharmacists WHERE node_id = ?", (target_node_id,)).fetchall()}
     conn.close()
@@ -189,13 +167,15 @@ if not st.session_state.authenticated:
     st.title(ln["login_title"])
     st.caption(f"{ln['login_sub']} | Routing Target: `{target_node_id}`")
     
+    # 🎯 DISPLAY COMPREHENSIVE ALIGNED USERNAME DROP-DOWN
     UI_ROLE_NAME_MAP = {
         "ap_state_admin": "State Surveillance Administrator",
-        "district_officer": "District Officer",
-        "chc_doctor": "CHC Medical Practitioner (Default Doctor Account)",
-        "asha_worker": "ASHA Community Worker (Default ASHA Account)",
-        "pharma_person": "Pharmacist Store Manager (Default Pharma Account)"
+        "district_officer": "District Officer"
     }
+    # Dynamically bind clinical employees to the selection list arrays
+    for d in doc_rows: UI_ROLE_NAME_MAP[d] = f"Doctor: {d}"
+    for u, n in asha_rows.items(): UI_ROLE_NAME_MAP[u] = f"ASHA Worker: {n} ({u})"
+    for u, n in pharma_rows.items(): UI_ROLE_NAME_MAP[u] = f"Pharmacist: {n} ({u})"
     
     username_options = list(UI_ROLE_NAME_MAP.values())
     selected_ui_name = st.selectbox(ln["username"], username_options)
@@ -211,15 +191,6 @@ if not st.session_state.authenticated:
         if user_in in USER_REGISTRY and USER_REGISTRY[user_in]["password"] == pass_in:
             is_authenticated = True
             resolved_role = USER_REGISTRY[user_in]["role"]
-        elif user_in == "chc_doctor" and pass_in == "MedicalDoc123":
-            is_authenticated = True
-            resolved_role = "CHC Medical Practitioner"
-        elif user_in == "asha_worker" and pass_in == "VillageASHA456":
-            is_authenticated = True
-            resolved_role = "ASHA Community Worker"
-        elif user_in == "pharma_person" and pass_in == "PharmaStore456":
-            is_authenticated = True
-            resolved_role = "Pharmacist"
             
         if is_authenticated:
             st.session_state.authenticated = True
@@ -228,15 +199,13 @@ if not st.session_state.authenticated:
             log_transaction(st.session_state.user_role, st.session_state.node_id, "LOGIN", f"User account [{user_in}] authenticated successfully.")
             st.rerun()
         else:
-            st.error("Invalid Credentials / తప్పుడు పాస్‌వర్డ్")
+            st.error("Invalid Credentials for selected workspace profile / తప్పుడు పాస్‌వర్డ్")
 # ==========================================
 # ADMINISTRATIVE TIERS HUB VIEW
 # ==========================================
 else:
     ln = LOCALIZATION_DATA[st.session_state.current_lang]
     role = st.session_state.user_role
-    
-    # 🎯 FIX 1: Instantiated at the absolute root of the authenticated state so it's universally accessible by all roles
     node = st.session_state.node_id
     
     if st.sidebar.button(ln["btn_logout"]):
@@ -294,7 +263,7 @@ else:
         st.header("Clinical Triage Portal")
         conn = sqlite3.connect("smart_health.db")
         
-        docs_query = [d[0] for d in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (node,)).fetchall()]
+        docs_query = [d for d, in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (node,)).fetchall()]
         available_doctors = docs_query if docs_query else ["General OPD Pool"]
         
         # ASHA Worker Triage Intake Layer
@@ -334,7 +303,6 @@ else:
             st.dataframe(queue_df)
             
             if not queue_df.empty:
-                # 🎯 FIX 2: Replaced non-integer mapping lookup with clean series indexing (.iloc[0]) to eliminate the non-integer index TypeError
                 target_patient = queue_df.iloc[0]
                 st.info(f"👉 **Processing Case**: {target_patient['token_id']} | {target_patient['symptoms_logged']}")
                 
@@ -342,7 +310,6 @@ else:
                     whatsapp_link = build_esanjeevani_routing_gateway(target_patient['patient_phone'], "Active Assigned Duty Doctor")
                     st.link_button("📞 Launch Instant Video Consultation Channel", whatsapp_link, type="primary")
                 
-                # Digital Prescription Formulation Sub-Box
                 st.markdown("---")
                 st.subheader("💊 Formulate Digital Medical Prescription")
                 rx_med = st.selectbox("Select Core Medication", ["Anti-Viral Medical Kits", "Paracetamol 500mg Tab", "Amoxicillin 250mg Caps"])
@@ -367,19 +334,17 @@ else:
             st.dataframe(history_df, use_container_width=True)
         conn.close()
 
-    # Integrated Pharmacy Room Fulfillment Desk
+    # Pharmacy Fulfillment Deck
     elif role == "Pharmacist":
         st.header("Pharmacy Stock & Fulfillment Desk")
         pharma_mode = st.radio("Select Active Inventory Distribution Mode", ["Local Counter Dispensation", "Drone-Routed Aero Resupply Operations"], horizontal=True)
         
-        # 🎯 FIX 3: Global 'node' declaration in Block 3 ensures it parses safely here
         st.subheader("📥 Inbound Doctor Prescriptions Ledger")
         conn = sqlite3.connect("smart_health.db")
         rx_df = pd.read_sql_query("SELECT prescription_id, token_id, doctor_name, medication_name, dosage_instructions, consult_mode FROM patient_prescriptions WHERE node_id=? AND status='PENDING'", conn, params=(node,))
         st.dataframe(rx_df)
         
         if not rx_df.empty:
-            # 🎯 FIX 4: Replaced bracket mapping lookup with clean row series extraction (.iloc[0]) to eliminate non-integer lookup type errors
             target_rx = rx_df.iloc[0]
             st.markdown(f"### 🎯 Active Target Order: **Prescription ID {target_rx['prescription_id']}**")
             st.info(f"Patient Token: **{target_rx['token_id']}** | Medication: **{target_rx['medication_name']}** | Channel: **{target_rx['consult_mode']}**")
