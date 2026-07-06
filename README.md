@@ -102,3 +102,24 @@ The backend database relations enforce referential integrity across the healthca
 *   `patients`: Governed by verified **ABHA (Ayushman Bharat Health Account) IDs** tied to medical histories.
 *   `syndromic_reports`: Field records tracking daily symptoms per village sector for anomaly calculations.
 *   `drone_payloads`: Tracks flight dispatch logs, payload contents, battery matrices, and GPS destination status.
+
+========================================================================
+             BHARAT HEALTH AI: PILOT PHASE SECURE GATEWAY
+========================================================================
+
+AUTHORIZED USERNAME     PASSWORD               CLEARANCE ROLE AUTHORIZED
+------------------------------------------------------------------------
+ap_state_admin          AmaravatiHealth2026!   State Surveillance
+district_officer        VizagDSU99!            District Officer
+chc_doctor              MedicalDoc123          CHC Medical Practitioner
+asha_worker             VillageASHA456         ASHA Community Worker
+
+========================================================================
+                     SYSTEM DISPATCH SUMMARY NOTE
+========================================================================
+- Use 'ap_state_admin' or 'district_officer' to test and review the 
+  Matplotlib forecasting trends, drone routing grids, and hidden logs.
+- Use 'chc_doctor' or 'asha_worker' to access localized frontline point 
+  triage engines and generate active e-Sanjeevani WhatsApp sessions.
+========================================================================
+
