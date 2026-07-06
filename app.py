@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 import datetime
+import random
 
 # Import modular components directly from the package architecture
 from src.language_pack import LOCALIZATION_DATA, LANGUAGE_NAME_MAP
@@ -21,8 +22,12 @@ from src.telehealth import build_esanjeevani_routing_gateway
 def init_ap_pilot_db():
     conn = sqlite3.connect("smart_health.db")
     cursor = conn.cursor()
+    
+    # Structural relational table blueprints
     cursor.execute("CREATE TABLE IF NOT EXISTS administrative_hierarchy (node_id TEXT PRIMARY KEY, node_level TEXT, node_name TEXT, state_name TEXT, district_name TEXT, latitude REAL, longitude REAL);")
     cursor.execute("CREATE TABLE IF NOT EXISTS doctors (doctor_id TEXT PRIMARY KEY, node_id TEXT, doctor_name TEXT, specialization TEXT, active_status INT);")
+    cursor.execute("CREATE TABLE IF NOT EXISTS asha_workers (asha_id TEXT PRIMARY KEY, node_id TEXT, username TEXT, worker_name TEXT, assigned_village TEXT);")
+    cursor.execute("CREATE TABLE IF NOT EXISTS pharmacists (pharma_id TEXT PRIMARY KEY, node_id TEXT, username TEXT, employee_name TEXT);")
     cursor.execute("CREATE TABLE IF NOT EXISTS inventory (node_id TEXT, item_name TEXT, current_stock INT, min_required_threshold INT, daily_avg_consumption REAL, PRIMARY KEY (node_id, item_name));")
     cursor.execute("CREATE TABLE IF NOT EXISTS patient_triage_queue (token_id TEXT PRIMARY KEY, node_id TEXT, aadhaar_hash TEXT, patient_phone TEXT, symptoms_logged TEXT, status TEXT);")
     cursor.execute("CREATE TABLE IF NOT EXISTS node_operations (node_id TEXT PRIMARY KEY, total_beds INT, occupied_beds INT, active_epidemic_risk_score REAL);")
@@ -30,97 +35,184 @@ def init_ap_pilot_db():
     
     cursor.execute("SELECT COUNT(*) FROM administrative_hierarchy;")
     if cursor.fetchone() == 0:
-        cursor.executemany("INSERT INTO administrative_hierarchy VALUES (?, ?, ?, ?, ?, ?, ?);", [
+        # 🏥 SEED 1: 10 AP Pilot Health Facilities (Visakhapatnam, Srikakulam, Vizianagaram)
+        nodes = [
             ("IN-AP-VSP-PND", "Tehsil", "Pendurthi CHC Hub", "Andhra Pradesh", "Visakhapatnam", 17.8344, 83.2014),
             ("IN-AP-VSP-BHM", "Tehsil", "Bheemili Hospital Spoke", "Andhra Pradesh", "Visakhapatnam", 17.8903, 83.4447),
+            ("IN-AP-VSP-GJV", "Tehsil", "Gajuwaka Industrial PHC", "Andhra Pradesh", "Visakhapatnam", 17.6896, 83.2089),
+            ("IN-AP-VSP-ANA", "Tehsil", "Anakapalle Referral CHC", "Andhra Pradesh", "Visakhapatnam", 17.6895, 83.0024),
             ("IN-AP-VZM-GJM", "Tehsil", "Gajapathinagaram PHC", "Andhra Pradesh", "Vizianagaram", 18.2750, 83.3314),
-            ("IN-AP-SKL-RUR", "Tehsil", "Srikakulam Rural Health Center", "Andhra Pradesh", "Srikakulam", 18.2949, 83.8938)
-        ])
+            ("IN-AP-VZM-CHB", "Tehsil", "Cheepurupalli Spoke CHC", "Andhra Pradesh", "Vizianagaram", 18.3094, 83.5656),
+            ("IN-AP-VZM-SKR", "Tehsil", "Sravankota Rural PHC", "Andhra Pradesh", "Vizianagaram", 18.4210, 83.4110),
+            ("IN-AP-SKL-RUR", "Tehsil", "Srikakulam Rural Health Center", "Andhra Pradesh", "Srikakulam", 18.2949, 83.8938),
+            ("IN-AP-SKL-PLM", "Tehsil", "Palasa Super-Specialty Spoke", "Andhra Pradesh", "Srikakulam", 18.7702, 84.4178),
+            ("IN-AP-SKL-TKK", "Tehsil", "Tekkali Area Referral CHC", "Andhra Pradesh", "Srikakulam", 18.6134, 84.2324)
+        ]
+        cursor.executemany("INSERT INTO administrative_hierarchy VALUES (?, ?, ?, ?, ?, ?, ?);", nodes)
+        
+        # 🩺 SEED 2: 10 Active Shift On-Duty Doctors
         cursor.executemany("INSERT INTO doctors VALUES (?, ?, ?, ?, ?);", [
             ("DOC001", "IN-AP-VSP-PND", "Dr. S. Srinivasa Rao", "General Medicine", 1),
-            ("DOC002", "IN-AP-VSP-BHM", "Dr. A. Lakshmi Prasanna", "Pediatrics", 1),
-            ("DOC003", "IN-AP-VZM-GJM", "Dr. Ch. Koteswara Rao", "Family Physician", 1),
-            ("DOC004", "IN-AP-SKL-RUR", "Dr. K. Venkataswamy", "Epidemiology Specialist", 1)
+            ("DOC002", "IN-AP-VSP-PND", "Dr. K. Anuradha", "Gynaecology Specialist", 1),
+            ("DOC003", "IN-AP-VSP-BHM", "Dr. A. Lakshmi Prasanna", "Pediatrics", 1),
+            ("DOC004", "IN-AP-VSP-GJV", "Dr. P. Venkatesh", "Occupational Health", 1),
+            ("DOC005", "IN-AP-VSP-ANA", "Dr. G. Satyanarayana", "General Surgery", 1),
+            ("DOC006", "IN-AP-VZM-GJM", "Dr. Ch. Koteswara Rao", "Family Physician", 1),
+            ("DOC007", "IN-AP-VZM-CHB", "Dr. M. Sridevi", "Internal Medicine", 1),
+            ("DOC008", "IN-AP-VZM-SKR", "Dr. J. Ramana", "Emergency Care Triage", 1),
+            ("DOC009", "IN-AP-SKL-RUR", "Dr. K. Venkataswamy", "Epidemiology Specialist", 1),
+            ("DOC010", "IN-AP-SKL-PLM", "Dr. Y. Appala Naidu", "Nephrology Consultant", 1)
         ])
+        
+        # 🎒 SEED 3: 10 Local ASHA Workers with specific Usernames mapped to Facilities
+        cursor.executemany("INSERT INTO asha_workers VALUES (?, ?, ?, ?, ?);", [
+            ("ASHA001", "IN-AP-VSP-PND", "asha_pendurthi_1", "Smt. T. Appalanamma", "Pendurthi Sector 1"),
+            ("ASHA002", "IN-AP-VSP-PND", "asha_gorapalli", "Smt. K. Satyavathi", "Gorapalli Village"),
+            ("ASHA003", "IN-AP-VSP-BHM", "asha_bheemili_coastal", "Smt. G. Lakshmi", "Bheemili Coastal Zone"),
+            ("ASHA004", "IN-AP-VSP-GJV", "asha_gajuwaka_colony", "Smt. P. Mary", "Gajuwaka Colony Beta"),
+            ("ASHA005", "IN-AP-VSP-ANA", "asha_anakapalle_rural", "Smt. B. Durga", "Anakapalle Rural Grid"),
+            ("ASHA006", "IN-AP-VZM-GJM", "asha_gajapathinagaram", "Smt. D. Parvathi", "Gajapathinagaram Ward 4"),
+            ("ASHA007", "IN-AP-VZM-CHB", "asha_cheepurupalli_east", "Smt. V. Ramani", "Cheepurupalli East"),
+            ("ASHA008", "IN-AP-VZM-SKR", "asha_sravankota_hills", "Smt. M. Gowri", "Sravankota Hills Node"),
+            ("ASHA009", "IN-AP-SKL-RUR", "asha_srikakulam_river", "Smt. K. Chittemma", "Srikakulam River Block"),
+            ("ASHA010", "IN-AP-SKL-PLM", "asha_palasa_cashew", "Smt. L. Savithri", "Palasa Cashew Village")
+        ])
+
+        # 💊 SEED 4: 10 Local Pharmacists mapped to Facilities
+        cursor.executemany("INSERT INTO pharmacists VALUES (?, ?, ?, ?);", [
+            ("PHM001", "IN-AP-VSP-PND", "pharma_pendurthi", "Sri K. Jagannadham"),
+            ("PHM002", "IN-AP-VSP-BHM", "pharma_bheemili", "Sri G. Anand Kumar"),
+            ("PHM003", "IN-AP-VSP-GJV", "pharma_gajuwaka", "Smt. S. Kalyani"),
+            ("PHM004", "IN-AP-VSP-ANA", "pharma_anakapalle", "Sri V. Naidu"),
+            ("PHM005", "IN-AP-VZM-GJM", "pharma_gajapathinagaram", "Sri R. K. Prasad"),
+            ("PHM006", "IN-AP-VZM-CHB", "pharma_cheepurupalli", "Smt. T. Radha"),
+            ("PHM007", "IN-AP-VZM-SKR", "pharma_sravankota", "Sri P. Simhachalam"),
+            ("PHM008", "IN-AP-SKL-RUR", "pharma_srikakulam_rur", "Sri B. Krishna"),
+            ("PHM009", "IN-AP-SKL-PLM", "pharma_palasa", "Sri N. Mohana Rao"),
+            ("PHM010", "IN-AP-SKL-TKK", "pharma_tekkali", "Smt. V. Anuradha")
+        ])
+        
+        # 📦 SEED 5: 10 Pharmacy Inventory Records
         cursor.executemany("INSERT INTO inventory VALUES (?, ?, ?, ?, ?);", [
             ("IN-AP-VSP-PND", "Anti-Viral Medical Kits", 5, 200, 12.5),
+            ("IN-AP-VSP-PND", "Paracetamol 500mg Tab", 450, 2000, 150.0),
             ("IN-AP-VSP-BHM", "Anti-Viral Medical Kits", 1800, 300, 22.0),
+            ("IN-AP-VSP-BHM", "Amoxicillin 250mg Caps", 2300, 500, 45.0),
+            ("IN-AP-VSP-GJV", "Basic Diagnostic Strips", 80, 500, 35.0),
+            ("IN-AP-VSP-ANA", "ORS Hydration Pouches", 120, 1000, 85.0),
             ("IN-AP-VZM-GJM", "Basic Diagnostic Strips", 12, 100, 14.5),
-            ("IN-AP-SKL-RUR", "Anti-Viral Medical Kits", 450, 100, 15.0)
+            ("IN-AP-VZM-CHB", "Paracetamol 500mg Tab", 50, 1500, 110.0),
+            ("IN-AP-SKL-RUR", "Anti-Viral Medical Kits", 450, 100, 15.0),
+            ("IN-AP-SKL-PLM", "Emergency Medical Kit A", 3, 25, 2.8)
         ])
+        
+        # 👤 SEED 6: AUTOMATED 100-PATIENT HIGH-DENSITY TRIAGE RECORD ENGINE
+        first_names = ["Ramesh", "Suresh", "Venkat", "Chiranjeevi", "Naidu", "Satish", "Anitha", "Lakshmi", "Durga", "Rama"]
+        last_names = ["Pilla", "Kona", "Ganti", "Vanka", "Reddy", "Allu", "Yerra", "Boni", "Koppula", "Myla"]
+        symptom_pool = ["High Fever, Continuous Dry Cough", "Acute Diarrhea, Dehydration", "Persistent Dry Cough, Sore Throat"]
+        patient_records = []
+        for i in range(1, 101):
+            token_id = f"AP-SEED-{1000 + i}"
+            selected_node = random.choice(nodes)
+            p_name = f"{random.choice(first_names)} {random.choice(last_names)}"
+            aadhaar_mock = str(random.randint(100000000000, 999999999999))
+            phone_mock = f"+919{random.randint(10000000, 99999999)}"
+            logged_symptoms = random.choice(symptom_pool)
+            patient_records.append((token_id, selected_node[0], str(hash(aadhaar_mock)), phone_mock, f"Patient: {p_name} | {logged_symptoms}", "COMPLETED"))
+        cursor.executemany("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, ?);", patient_records)
+        
+        # Seeding node operations
         cursor.executemany("INSERT INTO node_operations VALUES (?, ?, ?, ?);", [
-            ("IN-AP-VSP-PND", 40, 35, 0.88),
-            ("IN-AP-VSP-BHM", 30, 5, 0.12),
-            ("IN-AP-VZM-GJM", 15, 2, 0.42),
-            ("IN-AP-SKL-RUR", 20, 18, 0.76)
+            ("IN-AP-VSP-PND", 40, 35, 0.88), ("IN-AP-VSP-BHM", 30, 5, 0.12), ("IN-AP-VSP-GJV", 25, 20, 0.35),
+            ("IN-AP-VSP-ANA", 50, 42, 0.65), ("IN-AP-VZM-GJM", 15, 2, 0.42), ("IN-AP-VZM-CHB", 20, 18, 0.11),
+            ("IN-AP-VZM-SKR", 10, 9, 0.73), ("IN-AP-SKL-RUR", 20, 18, 0.76), ("IN-AP-SKL-PLM", 35, 30, 0.22), ("IN-AP-SKL-TKK", 30, 12, 0.05)
         ])
     conn.commit()
     conn.close()
 
 init_ap_pilot_db()
-
-# State memory management initial patterns
+# ==========================================
+# STATE ARCHITECTURE & LOCATION CASCADE
+# ==========================================
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
 if "user_role" not in st.session_state: st.session_state.user_role = None
 if "node_id" not in st.session_state: st.session_state.node_id = None
 if "current_lang" not in st.session_state: st.session_state.current_lang = "en"
 
-# Location Router & Language Resolution Interface
 if not st.session_state.authenticated:
     st.sidebar.markdown("### 🗺️ Pilot Location Router")
-    st.sidebar.info("📍 Active State Layer: **Andhra Pradesh**")
-    
     selected_lang_name = st.sidebar.radio("Language / భాష", list(LANGUAGE_NAME_MAP.values()), horizontal=True)
     for code, name in LANGUAGE_NAME_MAP.items():
         if name == selected_lang_name: st.session_state.current_lang = code
-            
     ln = LOCALIZATION_DATA[st.session_state.current_lang]
     
     conn = sqlite3.connect("smart_health.db")
     
+    # Fixed indexing tuple extract rule by unpacking individual strings [row for ...]
     dist_list = [row[0] for row in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
     chosen_district = st.sidebar.selectbox(ln["select_district"], dist_list)
     
     fac_cursor = conn.execute("SELECT node_name, node_id FROM administrative_hierarchy WHERE district_name = ?", (chosen_district,)).fetchall()
     
+    # Packed lookup validation guard
     if fac_cursor:
         facility_map = {name: node_id for name, node_id in fac_cursor}
     else:
         facility_map = {"No Facilities Found": "NONE"}
-    
+        
     chosen_facility_name = st.sidebar.selectbox(ln["select_facility"], list(facility_map.keys()))
     target_node_id = facility_map[chosen_facility_name]
     
-    doc_rows = conn.execute("SELECT doctor_name, specialization FROM doctors WHERE node_id = ? AND active_status = 1", (target_node_id,)).fetchall()
+    # Query assigned personnel records matching the targeted hub zone context
+    doc_rows = [r[0] for r in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
+    asha_rows = {r[0]: r[1] for r in conn.execute("SELECT username, worker_name FROM asha_workers WHERE node_id = ?", (target_node_id,)).fetchall()}
+    pharma_rows = {r[0]: r[1] for r in conn.execute("SELECT username, employee_name FROM pharmacists WHERE node_id = ?", (target_node_id,)).fetchall()}
     conn.close()
     
-    st.sidebar.markdown(f"**🩺 {ln['avail_docs']}:**")
-    if doc_rows:
-        for doc_name, spec in doc_rows: 
-            st.sidebar.caption(f"• {doc_name} ({spec})")
-    else:
-        st.sidebar.caption("• No active practitioners checked into this node.")
+    # Render contextual directories in sidebar
+    st.sidebar.markdown(f"**🩺 Connected On-Duty Clinicians:**")
+    for d in doc_rows: st.sidebar.caption(f"• {d}")
+    st.sidebar.markdown(f"**🎒 Local ASHA Workers assigned here:**")
+    for u, n in asha_rows.items(): st.sidebar.caption(f"• {n} (`{u}`)")
+    st.sidebar.markdown(f"**💊 Local Pharmacy Store Managers:**")
+    for u, n in pharma_rows.items(): st.sidebar.caption(f"• {n} (`{u}`)")
 
     st.title(ln["login_title"])
     st.caption(f"{ln['login_sub']} | Routing Target: `{target_node_id}`")
     
-    # 🎯 CONVERTED: Username entry field transformed into a selection dropdown list
-    username_options = list(USER_REGISTRY.keys())
+    # Formulate security credentials dropdown
+    base_admins = ["ap_state_admin", "district_officer"]
+    username_options = base_admins + doc_rows + list(asha_rows.keys()) + list(pharma_rows.keys())
     user_in = st.selectbox(ln["username"], username_options)
-    
     pass_in = st.text_input(ln["password"], type="password")
     
     if st.button(ln["btn_login"]):
+        is_authenticated = False
+        resolved_role = ""
+        
         if user_in in USER_REGISTRY and USER_REGISTRY[user_in]["password"] == pass_in:
+            is_authenticated = True
+            resolved_role = USER_REGISTRY[user_in]["role"]
+        elif user_in in doc_rows and pass_in == "MedicalDoc123":
+            is_authenticated = True
+            resolved_role = "CHC Medical Practitioner"
+        elif user_in in asha_rows and pass_in == "VillageASHA456":
+            is_authenticated = True
+            resolved_role = "ASHA Community Worker"
+        elif user_in in pharma_rows and pass_in == "PharmaStore456":
+            is_authenticated = True
+            resolved_role = "Pharmacist"
+            
+        if is_authenticated:
             st.session_state.authenticated = True
-            st.session_state.user_role = USER_REGISTRY[user_in]["role"]
+            st.session_state.user_role = resolved_role
             st.session_state.node_id = target_node_id
-            log_transaction(st.session_state.user_role, st.session_state.node_id, "LOGIN", "Logged into Andhra Pradesh pilot matrix via selectbox.")
+            log_transaction(st.session_state.user_role, st.session_state.node_id, "LOGIN", f"User {user_in} logged in.")
             st.rerun()
         else:
-            st.error("Invalid Security Token / తప్పుడు పాస్‌వర్డ్")
+            st.error("Invalid Credentials / తప్పుడు పాస్‌వర్డ్")
 # ==========================================
-# AUTHENTICATED SYSTEM ENVIRONMENT ROUTER
+# AUTHENTICATED OPERATIONS WORKSPACE LAYER
 # ==========================================
 else:
     ln = LOCALIZATION_DATA[st.session_state.current_lang]
@@ -139,7 +231,7 @@ else:
 
     st.title(ln["title"])
 
-    # 🏢 ENVIRONMENT 1: MANAGEMENT DASHBOARDS (State / District Controls)
+    # 🏢 ENVIRONMENT 1: EXECUTIVE SUPERVISOR HUB (State / District Views)
     if role in ["State Surveillance", "District Officer"]:
         st.header(ln["facility_status"])
         df_inv, transfers = run_cross_tier_supply_balancing()
@@ -152,20 +244,17 @@ else:
         for _, alert in anomalies.iterrows():
             st.error(f"🔴 **CRITICAL OUTBREAK WARNING**: PHC Node `{alert['node_name']}` has triggered an epidemic warning score of **{alert['active_epidemic_risk_score']}**! Dispatch response teams.")
         
-        # Matplotlib Rendering Framework Hooks
+        # Render the Matplotlib Graphical Figures
         st.markdown("---")
         st.subheader("📊 Executive Data Visualizations (Matplotlib Renderers)")
-        
         col1, col2 = st.columns(2)
         with col1:
-            stock_fig = generate_stock_prediction_chart(df_inv)
-            st.pyplot(stock_fig)
+            st.pyplot(generate_stock_prediction_chart(df_inv))
         with col2:
-            risk_fig = generate_epidemic_risk_chart()
-            st.pyplot(risk_fig)
+            st.pyplot(generate_epidemic_risk_chart())
         st.markdown("---")
         
-        # Dynamic Aerial Drone Management
+        # Render Drone routing and map assets
         st.subheader(ln["redistribution"])
         if transfers:
             for t in transfers:
@@ -205,9 +294,50 @@ else:
                 log_transaction(role, node, "PATIENT_INTAKE", f"Logged triage token {token_id}")
                 
                 if not docs_df.empty:
-                    whatsapp_link = build_esanjeevani_routing_gateway(p_phone, docs_df.iloc['doctor_name'])
+                    whatsapp_link = build_esanjeevani_routing_gateway(p_phone, docs_df.iloc[0]['doctor_name'])
                     st.success(f"Patient Added! Token Issued: **{token_id}**")
                     st.link_button("📞 Launch Instant Telehealth Session", whatsapp_link, type="primary")
             else:
                 st.error("Invalid formatting requirements.")
+                
+        # Renders the high-density patient history logs inside the clinician portal
+        st.markdown("---")
+        st.subheader("📚 Historical Patient Electronic Health Records (EHR Ledger)")
+        st.caption("Displaying recent cross-mandal historical cases registered at this hub.")
+        
+        history_df = pd.read_sql_query("""
+            SELECT token_id, symptoms_logged as 'Demographics & Symptoms Profile', status as 'Care Status' 
+            FROM patient_triage_queue 
+            WHERE node_id = ? AND status = 'COMPLETED' 
+            LIMIT 100
+        """, conn, params=(node,))
+        
+        if not history_df.empty:
+            st.dataframe(history_df, use_container_width=True)
+            st.caption(f"Showing {len(history_df)} processed historical patient case registries.")
+        else:
+            st.info("No historical case records found for this specific facility node context.")
+        conn.close()
+
+    # 💊 ENVIRONMENT 3: PHARMACIST WORKSPACE
+    elif role == "Pharmacist":
+        st.header("Pharmacy Stock Management Matrix")
+        conn = sqlite3.connect("smart_health.db")
+        inv_df = pd.read_sql_query("SELECT item_name, current_stock, min_required_threshold FROM inventory WHERE node_id=?", conn, params=(node,))
+        st.dataframe(inv_df)
+        
+        if not inv_df.empty:
+            med_to_dispense = st.selectbox("Select Drug Asset for Patient Distribution", inv_df['item_name'].tolist())
+            if st.button("Single-Click Asset Dispense"):
+                conn.execute("UPDATE inventory SET current_stock = current_stock - 1 WHERE node_id=? AND item_name=?", (node, med_to_dispense))
+                conn.commit()
+                log_transaction(role, node, "MEDICINE_DISPENSE", f"Dispensed 1 unit of {med_to_dispense}.")
+                st.success(f"Dispersion verified for {med_to_dispense}.")
+                st.rerun()
+                
+        st.subheader("UAV Cargo Intervention")
+        low_stock_item = st.selectbox("Request Drone Backup Payload", ["Emergency Medical Kit A", "Paracetamol 500mg Tab"])
+        if st.button("⚡ Request Instant Drone Resupply"):
+            log_transaction(role, node, "DRONE_REQUEST", f"Requested emergency backup delivery of {low_stock_item}.")
+            st.warning("Supply Chain emergency payload request queued onto District Admin telemetry rails.")
         conn.close()
