@@ -96,67 +96,76 @@ streamlit run app.py
 
 ---
 
-## 🔑 Multi-District Secure Authentication Matrix
+# Bharat Health AI: Decentralized Multi-District Care & Aero-Logistics Network
 
-The platform implements a **Geospatial Role-Based Access Control (RBAC)** architecture. Select your target **District** and **Facility Node** in the sidebar navigation matrix, then pick the corresponding authorized profile name from the **Username** selectbox dropdown list to test specific localized care workflows:
-
-### 🌐 Global / Cross-District Administrative Clearances
-
-| District Selector | Username Selection Option | Required Password | Authorized View & Clearance Level |
-| :--- | :--- | :--- | :--- |
-| **Any District** | `State Surveillance Admin` | `AmaravatiHealth2026!` | State Surveillance (Matplotlib Regional Anomaly Distribution Charts & Global Audit Ledger) |
-| **Any District** | `District Officer` | `VizagDSU99!` | District Officer (UAV Drone Resource Re-balancing Maps & Real-time Expiry Forecasts) |
+An enterprise-grade, offline-first health management platform designed for public health infrastructure. This application operates on a specialized **Cascading Location Matrix and State Audit Model**, bridging the gap between frontline village healthcare, district-level coordinators, and state surveillance administrators across Andhra Pradesh.
 
 ---
 
-### 📍 District 1: Visakhapatnam (Edge Nodes Workspace)
+## 🔑 Complete Operational Credentials Matrix
 
-| Targeted Facility Dropdown | Username Selection Option | Required Password | Functional Mode Matrix Capability |
+To evaluate different organizational tiers within the platform, select your target **District** and **Facility Node** in the sidebar navigation matrix, then pick the corresponding authorized profile name from the **Username** selectbox dropdown list:
+
+### 🏢 Cross-District Administrative Clearances
+
+| District Selector Context | Username Selection Option | Required Password | Authorized View & clearance Level |
 | :--- | :--- | :--- | :--- |
-| **Pendurthi CHC Hub** | `Dr. S. Srinivasa Rao` | `MedicalDoc123` | **Local Mode**: Bed Occupancy. **Video Mode**: e-Sanjeevani API Engine & Rx |
-| **Pendurthi CHC Hub` | `Smt. T. Appalanamma` | `VillageASHA456` | **Local Mode**: Vitals Screening & Logging. **Video Mode**: Tele-Triage Ingestion |
-| **Pendurthi CHC Hub** | `Sri K. Jagannadham` | `PharmaStore456` | **Local Mode**: Over-The-Counter Dispensing. **Video Mode**: Autonomous Drone Resupply |
+| **Any District** | `ap_state_admin` | `AmaravatiHealth2026!` | State Surveillance (Unrestricted monitoring access to all 3 districts concurrently) |
+| **Visakhapatnam** | `vsp_district_officer` | `VizagDSU99!` | District Officer (Isolated analytics scope locked to Visakhapatnam) |
+| **Vizianagaram** | `vzm_district_officer` | `VizagDSU99!` | District Officer (Isolated analytics scope locked to Vizianagaram) |
+| **Srikakulam** | `skl_district_officer` | `VizagDSU99!` | District Officer (Isolated analytics scope locked to Srikakulam) |
+
+### 📍 District 1: Visakhapatnam Node Accounts
+
+| Targeted Facility Dropdown | Username Selection Option | Required Password | Authorized Frontline Role View |
+| :--- | :--- | :--- | :--- |
+| **Pendurthi CHC Hub** | `Dr. S. Srinivasa Rao` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
+| **Pendurthi CHC Hub** | `Dr. K. Anuradha` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
+| **Pendurthi CHC Hub** | `asha_worker` | `VillageASHA456` | ASHA Community Worker (Patient Intake Logger) |
+| **Pendurthi CHC Hub** | `pharma_person` | `PharmaStore456` | Pharmacist Store Manager (Fulfillment Desk) |
+| **Bheemili Hospital Spoke** | `Dr. A. Lakshmi Prasanna` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
+| **Gajuwaka Industrial PHC** | `Dr. P. Venkatesh` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
+| **Anakapalle Referral CHC** | `Dr. G. Satyanarayana` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
+
+### 📍 District 2: Vizianagaram Node Accounts
+
+| Targeted Facility Dropdown | Username Selection Option | Required Password | Authorized Frontline Role View |
+| :--- | :--- | :--- | :--- |
+| **Gajapathinagaram PHC** | `Dr. Ch. Koteswara Rao` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
+| **Gajapathinagaram PHC** | `asha_gajapathinagaram` | `VillageASHA456` | ASHA Community Worker (Patient Intake Logger) |
+| **Gajapathinagaram PHC** | `pharma_gajapathinagaram`| `PharmaStore456` | Pharmacist Store Manager (Fulfillment Desk) |
+| **Cheepurupalli Spoke CHC**| `Dr. M. Sridevi` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
+| **Sravankota Rural PHC** | `Dr. J. Ramana` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
+
+### 📍 District 3: Srikakulam Node Accounts
+
+| Targeted Facility Dropdown | Username Selection Option | Required Password | Authorized Frontline Role View |
+| :--- | :--- | :--- | :--- |
+| **Srikakulam Rural Center**| `Dr. K. Venkataswamy` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
+| **Srikakulam Rural Center**| `asha_srikakulam` | `VillageASHA456` | ASHA Community Worker (Patient Intake Logger) |
+| **Srikakulam Rural Center**| `pharma_srikakulam_rur` | `PharmaStore456` | Pharmacist Store Manager (Fulfillment Desk) |
+| **Palasa Super-Spec Spoke**| `Dr. Y. Appala Naidu` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
 
 ---
 
-### 📍 District 2: Vizianagaram (Edge Nodes Workspace)
+## 🧪 Comprehensive Cross-tier Validation Walkthrough
 
-| Targeted Facility Dropdown | Username Selection Option | Required Password | Functional Mode Matrix Capability |
-| :--- | :--- | :--- | :--- |
-| **Gajapathinagaram PHC** | `Dr. Ch. Koteswara Rao` | `MedicalDoc123` | **Local Mode**: Bed Occupancy. **Video Mode**: e-Sanjeevani API Engine & Rx |
-| **Gajapathinagaram PHC** | `Smt. D. Parvathi` | `VillageASHA456` | **Local Mode**: Vitals Screening & Logging. **Video Mode**: Tele-Triage Ingestion |
-| **Gajapathinagaram PHC** | `Sri R. K. Prasad` | `PharmaStore456` | **Local Mode**: Over-The-Counter Dispensing. **Video Mode**: Autonomous Drone Resupply |
+Follow these exact operational walkthroughs to demonstrate your end-to-end architecture workflows to the grading panel:
 
----
+### Walkthrough A: Closed-Loop Digital Prescription Routing
+1. Set the sidebar location matrix to **Srikakulam** ➡️ **Srikakulam Rural Health Center**.
+2. Select **asha_srikakulam** from the username selector dropdown and input password: `VillageASHA456`.
+3. Fill out the *Patient Intake Logger* with test details (e.g., 12-digit Aadhaar), assign the case directly to **Dr. K. Venkataswamy**, and submit.
+4. Log out, maintain the location context, and log back in under **Dr. K. Venkataswamy** using password: `MedicalDoc123`.
+5. Locate the newly logged triage case. Toggle the consulting mode to *e-Sanjeevani Video Call Telehealth* to review video gates. Move to the *Formulate Digital Medical Prescription* panel, choose a medicine, type dosage instructions, and click **Issue Prescription to Pharmacy**.
+6. Log out and log back into the same center as **pharma_srikakulam_rur** (password: `PharmaStore456`). Toggle the active distribution mode to *Drone-Routed Aero Resupply*. You will see the doctor's prescription securely routed to the fulfillment queue. Click **Authorize Autonomous Drone Resupply Delivery** to fire the UAV simulation.
 
-### 📍 District 3: Srikakulam (Edge Nodes Workspace)
+### Walkthrough B: Cross-District Secure Data Protection Block
+1. Choose **Dr. S. Srinivasa Rao** from the username dropdown. This practitioner belongs to **Visakhapatnam**.
+2. Intentionally change the sidebar location selector to a different territory context: **Srikakulam** ➡️ **Palasa Super-Specialty Spoke**.
+3. Input the password: `MedicalDoc123` and click Login.
+4. The system immediately detects the district boundary violation, flags a clear warning message block, hides all triage fields and active medical prescription form sheets, and switches into **Read-Only View Mode**, restricting the user solely to looking up the *Historical Patient Electronic Health Records (EHR Ledger)*.
 
-| Targeted Facility Dropdown | Username Selection Option | Required Password | Functional Mode Matrix Capability |
-| :--- | :--- | :--- | :--- |
-| **Srikakulam Rural Center** | `Dr. K. Venkataswamy` | `MedicalDoc123` | **Local Mode**: Bed Occupancy. **Video Mode**: e-Sanjeevani API Engine & Rx |
-| **Srikakulam Rural Center** | `Smt. K. Chittemma` | `VillageASHA456` | **Local Mode**: Vitals Screening & Logging. **Video Mode**: Tele-Triage Ingestion |
-| **Srikakulam Rural Center** | `Sri B. Krishna` | `PharmaStore456` | **Local Mode**: Over-The-Counter Dispensing. **Video Mode**: Autonomous Drone Resupply |
-
----
-
-## 🧪 Comprehensive Closed-Loop Prescription Evaluation Walkthrough
-
-Follow this exact sequence to demonstrate the entire cross-role integration of the platform to the evaluation panel:
-
-### Step 1: Decentralized Intake & Mode Choice (ASHA Worker)
-1. Set the location router context to **Srikakulam** ➡️ **Srikakulam Rural Health Center**.
-2. Select **Smt. K. Chittemma** from the username selector dropdown and input password: `VillageASHA456`.
-3. In the intake dashboard, toggle the operational mode from *In-Person Local Screening* to *Remote Tele-Triage Ingestion*. Notice how the data capture canvas shifts parameters dynamically.
-4. Input a valid 12-digit Aadhaar, enter a target patient phone number, assign the case to `Dr. K. Venkataswamy`, and click submit.
-
-### Step 2: Virtual Consultation & Prescription Generation (Doctor Room)
-1. Log out of the ASHA environment and authenticate into the same health center under **Dr. K. Venkataswamy** using password: `MedicalDoc123`.
-2. Toggle the consultant duty mode to *e-Sanjeevani Video Call Telehealth*.
-3. Review the patient triage queue populated in Step 1. Click the ** Launch Instant Video Consultation Channel** button to fire the dynamic browser link forwarding hook.
-4. Scroll down to the *Formulate Digital Medical Prescription* section. Select your target medicine, type your custom dosage instructions, and click ** Issue Prescription to Pharmacy**.
-
-### Step 3: Aero-Logistics Fulfillment (Pharmacist Counter)
-1. Log out and log back into the same facility hub under **Sri B. Krishna** using password: `PharmaStore456`.
-2. Toggle your inventory distribution mode selection interface to *Drone-Routed Aero Resupply Operations*.
-3. Notice how the inbound prescription ledger populates with the precise order issued by the doctor in Step 2.
-4. Click ** Authorize Autonomous Drone Resupply Delivery**. The app immediately decrements the local stock ledger, updates the patient prescription status field to `DRONE_DISPATCHED`, and launches an autonomous UAV route optimization path.
+### Walkthrough C: Administrative Jurisdiction Separation
+1. Log in under **vzm_district_officer** using password: `VizagDSU99!`. Access the administrative view panels to observe how the **Matplotlib asset charts** and drone logistics telemetry logs isolate data strictly to the **Vizianagaram** district lines.
+2. Log out and log in under **ap_state_admin** (password: `AmaravatiHealth2026!`). The layout expands instantly into unrestricted mode, compiling data from **Visakhapatnam, Vizianagaram, and Srikakulam** concurrently onto unified District Infection and Stock Exhaustion timelines.
