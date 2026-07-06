@@ -142,13 +142,11 @@ if not st.session_state.authenticated:
     
     conn = sqlite3.connect("smart_health.db")
     
-    # 🎯 DYNAMIC DISTRICT LIST: Queries the database and extracts unique district strings into a selectbox
-    dist_query = conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()
-    dist_list = [row[0] for row in dist_query] if dist_query else ["Visakhapatnam"]
-    
+    # 🎯 FIX 1: Explicit tuple index extraction 'row[0]' securely uncoils all 3 districts into clean strings
+    dist_list = [row[0] for row in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
     chosen_district = st.sidebar.selectbox(ln["select_district"], dist_list)
     
-    # Cascade filters health facilities based strictly on the selected district string
+    # Cascade filters health facilities based strictly on the selected district string matching conditions
     fac_cursor = conn.execute("SELECT node_name, node_id FROM administrative_hierarchy WHERE district_name = ?", (chosen_district,)).fetchall()
     
     if fac_cursor:
@@ -160,7 +158,7 @@ if not st.session_state.authenticated:
     target_node_id = facility_map[chosen_facility_name]
     
     # Fetch local personnel rosters matching the active facility context
-    doc_rows = [r for r, in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
+    doc_rows = [r[0] for r in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
     asha_rows = {u: n for u, n in conn.execute("SELECT username, worker_name FROM asha_workers WHERE node_id = ?", (target_node_id,)).fetchall()}
     pharma_rows = {u: n for u, n in conn.execute("SELECT username, employee_name FROM pharmacists WHERE node_id = ?", (target_node_id,)).fetchall()}
     conn.close()
