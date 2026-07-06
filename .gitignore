@@ -1,11 +1,11 @@
-# Local Database Storage (Generated out of thin air on Streamlit cloud startup)
+# Local Database Storage
 *.db
 *.sqlite3
 
-# Exported Audit Ledgers / Patient Reports (Contains sensitive data)
+# Exported Audit Ledgers / Patient Reports
 *.csv
 
-# Python Compilation Cache (Pollutes Git history log)
+# Python Compilation Cache
 __pycache__/
 *.pyc
 *.pyo
