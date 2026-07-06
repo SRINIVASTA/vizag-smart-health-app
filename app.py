@@ -34,7 +34,7 @@ def init_ap_pilot_db():
     
     cursor.execute("SELECT COUNT(*) FROM administrative_hierarchy;")
     if cursor.fetchone() == 0:
-        # 🏥 SEED 1: 10 AP Pilot Health Facilities (Visakhapatnam, Srikakulam, Vizianagaram)
+        # 🏥 SEED 1: 10 AP Pilot Health Facilities
         nodes = [
             ("IN-AP-VSP-PND", "Tehsil", "Pendurthi CHC Hub", "Andhra Pradesh", "Visakhapatnam", 17.8344, 83.2014),
             ("IN-AP-VSP-BHM", "Tehsil", "Bheemili Hospital Spoke", "Andhra Pradesh", "Visakhapatnam", 17.8903, 83.4447),
@@ -49,7 +49,7 @@ def init_ap_pilot_db():
         ]
         cursor.executemany("INSERT INTO administrative_hierarchy VALUES (?, ?, ?, ?, ?, ?, ?);", nodes)
         
-        # 🩺 SEED 2: 10 Shift On-Duty Doctors
+        # 🩺 SEED 2: 10 Active Doctors
         cursor.executemany("INSERT INTO doctors VALUES (?, ?, ?, ?, ?);", [
             ("DOC001", "IN-AP-VSP-PND", "Dr. S. Srinivasa Rao", "General Medicine", 1),
             ("DOC002", "IN-AP-VSP-PND", "Dr. K. Anuradha", "Gynaecology Specialist", 1),
@@ -63,7 +63,7 @@ def init_ap_pilot_db():
             ("DOC010", "IN-AP-SKL-PLM", "Dr. Y. Appala Naidu", "Nephrology Consultant", 1)
         ])
         
-        # 🎒 SEED 3: 10 Local ASHA Workers with specific Usernames mapped to Facilities
+        # 🎒 SEED 3: 10 Local ASHA Workers
         cursor.executemany("INSERT INTO asha_workers VALUES (?, ?, ?, ?, ?);", [
             ("ASHA001", "IN-AP-VSP-PND", "asha_worker", "Smt. T. Appalanamma", "Pendurthi Sector 1"),
             ("ASHA002", "IN-AP-VSP-PND", "asha_gorapalli", "Smt. K. Satyavathi", "Gorapalli Village"),
@@ -77,7 +77,7 @@ def init_ap_pilot_db():
             ("ASHA010", "IN-AP-SKL-PLM", "asha_palasa", "Smt. L. Savithri", "Palasa Cashew Village")
         ])
 
-        # 💊 SEED 4: 10 Local Pharmacists mapped to Facilities
+        # 💊 SEED 4: 10 Local Pharmacists
         cursor.executemany("INSERT INTO pharmacists VALUES (?, ?, ?, ?);", [
             ("PHM001", "IN-AP-VSP-PND", "pharma_person", "Sri K. Jagannadham"),
             ("PHM002", "IN-AP-VSP-BHM", "pharma_bheemili", "Sri G. Anand Kumar"),
@@ -145,25 +145,18 @@ if not st.session_state.authenticated:
     ln = LOCALIZATION_DATA[st.session_state.current_lang]
     
     conn = sqlite3.connect("smart_health.db")
-    
-    # Extract string values safely out of the 1-element tuples from SQLite
-    dist_list = [row[0] for row in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
+    dist_list = [row for row, in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
     chosen_district = st.sidebar.selectbox(ln["select_district"], dist_list)
     
     fac_cursor = conn.execute("SELECT node_name, node_id FROM administrative_hierarchy WHERE district_name = ?", (chosen_district,)).fetchall()
-    
-    if fac_cursor:
-        facility_map = {name: node_id for name, node_id in fac_cursor}
-    else:
-        facility_map = {"No Facilities Found": "NONE"}
-        
+    facility_map = {name: node_id for name, node_id in fac_cursor}
     chosen_facility_name = st.sidebar.selectbox(ln["select_facility"], list(facility_map.keys()))
     target_node_id = facility_map[chosen_facility_name]
     
-    # Fetch personnel details securely and extract string elements out of single-item tuples
-    doc_rows = [r[0] for r in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
-    asha_rows = {r[0]: r[1] for r in conn.execute("SELECT username, worker_name FROM asha_workers WHERE node_id = ?", (target_node_id,)).fetchall()}
-    pharma_rows = {r[0]: r[1] for r in conn.execute("SELECT username, employee_name FROM pharmacists WHERE node_id = ?", (target_node_id,)).fetchall()}
+    # Secure string element extraction loops
+    doc_rows = [r for r, in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (target_node_id,)).fetchall()]
+    asha_rows = {u: n for u, n in conn.execute("SELECT username, worker_name FROM asha_workers WHERE node_id = ?", (target_node_id,)).fetchall()}
+    pharma_rows = {u: n for u, n in conn.execute("SELECT username, employee_name FROM pharmacists WHERE node_id = ?", (target_node_id,)).fetchall()}
     conn.close()
     
     st.sidebar.markdown(f"**🩺 Connected On-Duty Clinicians:**")
@@ -176,7 +169,6 @@ if not st.session_state.authenticated:
     st.title(ln["login_title"])
     st.caption(f"{ln['login_sub']} | Routing Target: `{target_node_id}`")
     
-    # Friendly labels dictionary map for selection purposes
     UI_ROLE_NAME_MAP = {
         "ap_state_admin": "State Surveillance Administrator",
         "district_officer": "District Officer",
@@ -188,7 +180,6 @@ if not st.session_state.authenticated:
     username_options = list(UI_ROLE_NAME_MAP.values())
     selected_ui_name = st.selectbox(ln["username"], username_options)
     
-    # Corrected: Safely extract the matching string using list comprehension item extraction [0]
     user_in_list = [k for k, v in UI_ROLE_NAME_MAP.items() if v == selected_ui_name]
     user_in = user_in_list[0] if user_in_list else "unknown"
     pass_in = st.text_input(ln["password"], type="password")
@@ -219,7 +210,7 @@ if not st.session_state.authenticated:
         else:
             st.error("Invalid Credentials / తప్పుడు పాస్‌వర్డ్")
 # ==========================================
-# AUTHENTICATED SYSTEM ENVIRONMENT ROUTER
+# ADMINISTRATIVE TIERS HUB VIEW
 # ==========================================
 else:
     ln = LOCALIZATION_DATA[st.session_state.current_lang]
@@ -229,18 +220,16 @@ else:
     st.sidebar.markdown(f"### 👤 {ln['sidebar_session']}: **{role}**")
     st.sidebar.caption(f"📍 Node Code: `{node}`")
     
-    # 🎯 FIX: Changed 'st.clear()' to 'st.session_state.clear()' to permanently kill the AttributeError
     if st.sidebar.button(ln["btn_logout"]):
         log_transaction(role, node, "LOGOUT", "Session workspace cleanly terminated.")
         st.session_state.authenticated = False
         st.session_state.user_role = None
         st.session_state.node_id = None
-        st.session_state.clear() # Wipes the runtime dictionary securely
+        st.session_state.clear()
         st.rerun()
 
     st.title(ln["title"])
 
-    # 🏢 ENVIRONMENT 1: MANAGEMENT DASHBOARDS (Admin Views)
     if role in ["State Surveillance", "District Officer"]:
         st.header(ln["facility_status"])
         df_inv, transfers = run_cross_tier_supply_balancing()
@@ -256,7 +245,6 @@ else:
         # Matplotlib Rendering Framework Hooks
         st.markdown("---")
         st.subheader("📊 Executive Data Visualizations (Matplotlib Renderers)")
-        
         col1, col2 = st.columns(2)
         with col1:
             st.pyplot(generate_stock_prediction_chart(df_inv))
@@ -264,7 +252,7 @@ else:
             st.pyplot(generate_epidemic_risk_chart())
         st.markdown("---")
         
-        # Dynamic Aerial Drone Management
+        # Dynamic Aerial Drone Management Control Loop
         st.subheader(ln["redistribution"])
         if transfers:
             for t in transfers:
@@ -282,88 +270,106 @@ else:
         conn = sqlite3.connect("smart_health.db")
         st.dataframe(pd.read_sql_query("SELECT timestamp, user_role, node_id, action_type, details FROM system_audit_logs ORDER BY timestamp DESC", conn), use_container_width=True)
         conn.close()
-
-    # 🩺 ENVIRONMENT 2: FRONTLINE CLINICAL OPERATIONS (CHC / ASHA Logs)
+# ==========================================
+# FRONTLINE CLINICAL & PHARMACY ENVIRONMENT
+# ==========================================
     elif role in ["CHC Medical Practitioner", "ASHA Community Worker"]:
         st.header("Clinical Triage Portal")
         conn = sqlite3.connect("smart_health.db")
         
-        # Unpack SQLite query row components into clean strings
-        docs_query = conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (node,)).fetchall()
-        available_doctors = [d[0] for d in docs_query] if docs_query else ["General OPD Pool"]
+        docs_query = [d for d, in conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (node,)).fetchall()]
+        available_doctors = docs_query if docs_query else ["General OPD Pool"]
         
-        # ASHA Worker unique intake form branch
+        # ASHA Worker Triage Intake Layer
         if role == "ASHA Community Worker":
-            st.subheader("Patient Intake Logger & Doctor Assignment")
-            st.caption("Register citizens and triage select routing to on-shift medical practitioners.")
+            st.subheader("Patient Intake Logger & Case Coordinator")
+            
+            asha_mode = st.radio("Select Active Screening Mode Context", ["In-Person Local Screening", "Remote Tele-Triage Ingestion"], horizontal=True)
+            log_transaction(role, node, "MODE_CHANGE", f"ASHA switched mode to {asha_mode}")
             
             p_phone = st.text_input("Patient Contact Mobile Link (WhatsApp Enabled)", value="+91")
             aadhaar = st.text_input("Secure Aadhaar Entry (12 Digits)")
             assigned_doctor = st.selectbox("Assign Target Medical Practitioner / Doctor", available_doctors)
-            symptoms = st.text_area("Log Symptoms Profile Data")
             
-            if st.button("Submit Triage Logs & Assign Case"):
-                if len(aadhaar) == 12 and symptoms:
+            if asha_mode == "In-Person Local Screening":
+                st.markdown("### 📋 Physical Screening Vitals Grid")
+                v_temp = st.number_input("Recorded Body Temperature (°F)", value=98.6)
+                v_pulse = st.number_input("Pulse Rate (BPM)", value=72)
+                symptoms = st.text_area("Log Observed Physical Symptoms Profile Data")
+                combined_symptoms_log = f"[LOCAL OPD - Temp: {v_temp}F, Pulse: {v_pulse}] Assigned: {assigned_doctor} | Symptoms: {symptoms}"
+            else:
+                st.markdown("### 📲 Remote Telemedicine Referral Ingestion")
+                tele_notes = st.text_area("Enter Remote Symptoms / Preliminary Incident Complaints")
+                combined_symptoms_log = f"[REMOTE TELEMEDICINE] Assigned: {assigned_doctor} | Notes: {tele_notes}"
+                
+            if st.button("Submit Patient Case Logs"):
+                if len(aadhaar) == 12 and combined_symptoms_log:
                     token_id = f"AP-{datetime.datetime.now().strftime('%M%S')}"
-                    combined_symptoms_log = f"Assigned to: {assigned_doctor} | Symptoms: {symptoms}"
-                    
                     conn.execute("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, 'WAITING')", 
                                  (token_id, node, str(hash(aadhaar)), p_phone, combined_symptoms_log))
                     conn.commit()
-                    log_transaction(role, node, "PATIENT_INTAKE", f"ASHA created token {token_id} assigned to {assigned_doctor}")
-                    st.success(f"🎉 Patient Registered! Token: **{token_id}** routed to **{assigned_doctor}**.")
-                else:
-                    st.error("Invalid formatting requirements. Ensure Aadhaar is exactly 12 digits.")
+                    log_transaction(role, node, "PATIENT_INTAKE", f"ASHA created token {token_id} under context: {asha_mode}")
+                    st.success(f"🎉 Patient Registered successfully under **{asha_mode}** context! Routed to **{assigned_doctor}**.")
 
-        # Doctor queue dashboard branch
+        # Doctor Examination Queue Dashboard
         elif role == "CHC Medical Practitioner":
             st.subheader("Personal Triage Consultation Queue")
+            
+            doc_mode = st.radio("Set Doctor Active Duty Workspace Mode", ["Physical Local OPD Desk", "e-Sanjeevani Video Call Telehealth"], horizontal=True)
+            log_transaction(role, node, "MODE_CHANGE", f"Doctor switched mode to {doc_mode}")
+            
             queue_df = pd.read_sql_query("SELECT token_id, patient_phone, symptoms_logged FROM patient_triage_queue WHERE node_id=? AND status='WAITING'", conn, params=(node,))
             st.dataframe(queue_df)
             
             if not queue_df.empty:
                 target_patient = queue_df.iloc[0]
-                whatsapp_link = build_esanjeevani_routing_gateway(target_patient['patient_phone'], "Active Assigned Duty Doctor")
-                
                 st.info(f"👉 **Processing Case Key**: {target_patient['token_id']} | {target_patient['symptoms_logged']}")
-                st.link_button("📞 Launch Instant Telehealth Video Consultation", whatsapp_link, type="primary")
                 
-                if st.button("✅ Complete Session & Advance Queue"):
+                if doc_mode == "e-Sanjeevani Video Call Telehealth":
+                    whatsapp_link = build_esanjeevani_routing_gateway(target_patient['patient_phone'], "Active Assigned Duty Doctor")
+                    st.link_button("📞 Launch Instant Video Consultation Channel", whatsapp_link, type="primary")
+                else:
+                    st.success("Physical Local Examination mode initialized. Please proceed with in-person clinical check.")
+                
+                if st.button("✅ Complete Consultation Session & Advance Queue"):
                     conn.execute("UPDATE patient_triage_queue SET status='COMPLETED' WHERE token_id=?", (target_patient['token_id'],))
                     conn.commit()
-                    log_transaction(role, node, "TELEHEALTH_CALL", f"Completed session for {target_patient['token_id']}")
-                    st.success("Session saved.")
+                    log_transaction(role, node, "CLINICAL_VISIT", f"Completed consultation via context: {doc_mode}")
+                    st.success("Triage register updated successfully.")
                     st.rerun()
                     
         st.markdown("---")
         st.subheader("📚 Historical Patient Electronic Health Records (EHR Ledger)")
         history_df = pd.read_sql_query("SELECT token_id, symptoms_logged as 'Demographics & Symptoms Profile', status as 'Care Status' FROM patient_triage_queue WHERE node_id = ? AND status = 'COMPLETED' LIMIT 100", conn, params=(node,))
-        
         if not history_df.empty:
             st.dataframe(history_df, use_container_width=True)
-        else:
-            st.info("No historical case records found for this specific facility node context.")
         conn.close()
 
-    # 💊 ENVIRONMENT 3: PHARMACIST WORKSPACE
+    # Pharmacy Store Stock Room Hub
     elif role == "Pharmacist":
         st.header("Pharmacy Stock Management Matrix")
         conn = sqlite3.connect("smart_health.db")
+        
+        pharma_mode = st.radio("Select Active Inventory Distribution Mode", ["Local Counter Dispensation", "Drone-Routed Aero Resupply Operations"], horizontal=True)
+        log_transaction(role, node, "MODE_CHANGE", f"Pharmacist switched mode to {pharma_mode}")
+        
         inv_df = pd.read_sql_query("SELECT item_name, current_stock, min_required_threshold FROM inventory WHERE node_id=?", conn, params=(node,))
         st.dataframe(inv_df)
         
-        if not inv_df.empty:
-            med_to_dispense = st.selectbox("Select Drug Asset for Patient Distribution", inv_df['item_name'].tolist())
-            if st.button("Single-Click Asset Dispense"):
-                conn.execute("UPDATE inventory SET current_stock = current_stock - 1 WHERE node_id=? AND item_name=?", (node, med_to_dispense))
-                conn.commit()
-                log_transaction(role, node, "MEDICINE_DISPENSE", f"Dispensed 1 unit of {med_to_dispense}.")
-                st.success(f"Dispersion verified for {med_to_dispense}.")
-                st.rerun()
-                
-        st.subheader("UAV Cargo Intervention")
-        low_stock_item = st.selectbox("Request Drone Backup Payload", ["Emergency Medical Kit A", "Paracetamol 500mg Tab"])
-        if st.button("⚡ Request Instant Drone Resupply"):
-            log_transaction(role, node, "DRONE_REQUEST", f"Requested emergency backup delivery of {low_stock_item}.")
-            st.warning("Supply Chain emergency payload request queued onto District Admin telemetry rails.")
+        if pharma_mode == "Local Counter Dispensation":
+            st.subheader("Over-The-Counter Stock Issuance")
+            if not inv_df.empty:
+                med_to_dispense = st.selectbox("Select Drug Asset for Patient Distribution", inv_df['item_name'].tolist())
+                if st.button("Single-Click Counter Dispense"):
+                    conn.execute("UPDATE inventory SET current_stock = current_stock - 1 WHERE node_id=? AND item_name=?", (node, med_to_dispense))
+                    conn.commit()
+                    log_transaction(role, node, "MEDICINE_DISPENSE", f"Dispensed 1 unit of {med_to_dispense} locally over counter.")
+                    st.success(f"Dispersion verified locally for {med_to_dispense}.")
+                    st.rerun()
+        else:
+            st.subheader("UAV Cargo Aero-Logistics Management Control")
+            low_stock_item = st.selectbox("Request Drone Backup Payload Hub Dispatch", ["Emergency Medical Kit A", "Paracetamol 500mg Tab"])
+            if st.button("⚡ Request Instant Drone Hub Resupply"):
+                log_transaction(role, node, "DRONE_REQUEST", f"Requested emergency backup delivery of {low_stock_item} via aerial dispatch.")
+                st.warning("Supply Chain emergency payload request queued onto District Admin telemetry rails.")
         conn.close()
