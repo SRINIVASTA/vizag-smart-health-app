@@ -19,6 +19,25 @@ CREATE TABLE IF NOT EXISTS doctors (
     FOREIGN KEY (node_id) REFERENCES administrative_hierarchy(node_id)
 );
 
+-- Active ASHA Workers Mapping
+CREATE TABLE IF NOT EXISTS asha_workers (
+    asha_id TEXT PRIMARY KEY,
+    node_id TEXT,
+    username TEXT,
+    worker_name TEXT,
+    assigned_village TEXT,
+    FOREIGN KEY (node_id) REFERENCES administrative_hierarchy(node_id)
+);
+
+-- Local Pharmacist Personnel Mapping
+CREATE TABLE IF NOT EXISTS pharmacists (
+    pharma_id TEXT PRIMARY KEY,
+    node_id TEXT,
+    username TEXT,
+    employee_name TEXT,
+    FOREIGN KEY (node_id) REFERENCES administrative_hierarchy(node_id)
+);
+
 -- Dynamic Inventory Matrix
 CREATE TABLE IF NOT EXISTS inventory (
     node_id TEXT,
