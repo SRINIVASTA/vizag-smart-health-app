@@ -229,12 +229,13 @@ else:
     st.sidebar.markdown(f"### 👤 {ln['sidebar_session']}: **{role}**")
     st.sidebar.caption(f"📍 Node Code: `{node}`")
     
+    # 🎯 FIX: Changed 'st.clear()' to 'st.session_state.clear()' to permanently kill the AttributeError
     if st.sidebar.button(ln["btn_logout"]):
         log_transaction(role, node, "LOGOUT", "Session workspace cleanly terminated.")
         st.session_state.authenticated = False
         st.session_state.user_role = None
         st.session_state.node_id = None
-        st.clear()
+        st.session_state.clear() # Wipes the runtime dictionary securely
         st.rerun()
 
     st.title(ln["title"])
@@ -287,47 +288,40 @@ else:
         st.header("Clinical Triage Portal")
         conn = sqlite3.connect("smart_health.db")
         
-        # Fetch active doctors for the select list mapping box
+        # Unpack SQLite query row components into clean strings
         docs_query = conn.execute("SELECT doctor_name FROM doctors WHERE node_id = ?", (node,)).fetchall()
         available_doctors = [d[0] for d in docs_query] if docs_query else ["General OPD Pool"]
         
-        # 🎒 BRANCH 2A: UNIQUE PATH IF LOGGED IN AS ASHA WORKER (Intake Logger with Doctor Assignment)
+        # ASHA Worker unique intake form branch
         if role == "ASHA Community Worker":
             st.subheader("Patient Intake Logger & Doctor Assignment")
             st.caption("Register citizens and triage select routing to on-shift medical practitioners.")
             
             p_phone = st.text_input("Patient Contact Mobile Link (WhatsApp Enabled)", value="+91")
             aadhaar = st.text_input("Secure Aadhaar Entry (12 Digits)")
-            
-            # 🎯 RESOLVED: Interactive Dropdown allowing ASHA to assign the case directly to an available doctor
             assigned_doctor = st.selectbox("Assign Target Medical Practitioner / Doctor", available_doctors)
             symptoms = st.text_area("Log Symptoms Profile Data")
             
             if st.button("Submit Triage Logs & Assign Case"):
                 if len(aadhaar) == 12 and symptoms:
                     token_id = f"AP-{datetime.datetime.now().strftime('%M%S')}"
-                    
-                    # Store data fields with explicit doctor routing context appended to descriptions
                     combined_symptoms_log = f"Assigned to: {assigned_doctor} | Symptoms: {symptoms}"
                     
                     conn.execute("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, 'WAITING')", 
                                  (token_id, node, str(hash(aadhaar)), p_phone, combined_symptoms_log))
                     conn.commit()
                     log_transaction(role, node, "PATIENT_INTAKE", f"ASHA created token {token_id} assigned to {assigned_doctor}")
-                    st.success(f"🎉 Patient Registered Successfully! Token Issued: **{token_id}** and routed cleanly to **{assigned_doctor}**.")
+                    st.success(f"🎉 Patient Registered! Token: **{token_id}** routed to **{assigned_doctor}**.")
                 else:
                     st.error("Invalid formatting requirements. Ensure Aadhaar is exactly 12 digits.")
 
-        # 🩺 BRANCH 2B: UNIQUE PATH IF LOGGED IN AS CHC MEDICAL PRACTITIONER (Doctor Queue Portal)
+        # Doctor queue dashboard branch
         elif role == "CHC Medical Practitioner":
             st.subheader("Personal Triage Consultation Queue")
-            
-            # Read only waiting patient lists from database
             queue_df = pd.read_sql_query("SELECT token_id, patient_phone, symptoms_logged FROM patient_triage_queue WHERE node_id=? AND status='WAITING'", conn, params=(node,))
             st.dataframe(queue_df)
             
             if not queue_df.empty:
-                # Target first patient in the database index row
                 target_patient = queue_df.iloc[0]
                 whatsapp_link = build_esanjeevani_routing_gateway(target_patient['patient_phone'], "Active Assigned Duty Doctor")
                 
@@ -341,7 +335,6 @@ else:
                     st.success("Session saved.")
                     st.rerun()
                     
-        # Renders the high-density historical registries below forms
         st.markdown("---")
         st.subheader("📚 Historical Patient Electronic Health Records (EHR Ledger)")
         history_df = pd.read_sql_query("SELECT token_id, symptoms_logged as 'Demographics & Symptoms Profile', status as 'Care Status' FROM patient_triage_queue WHERE node_id = ? AND status = 'COMPLETED' LIMIT 100", conn, params=(node,))
