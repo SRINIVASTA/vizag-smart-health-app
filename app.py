@@ -77,12 +77,15 @@ if not st.session_state.authenticated:
     ln = LOCALIZATION_DATA[st.session_state.current_lang]
     
     conn = sqlite3.connect("smart_health.db")
+    
+    # FIX 1: Extract string fields cleanly out of tuples via structural unpacking [row[0] for ...]
     dist_list = [row[0] for row in conn.execute("SELECT DISTINCT district_name FROM administrative_hierarchy").fetchall()]
     chosen_district = st.sidebar.selectbox(ln["select_district"], dist_list)
     
     fac_cursor = conn.execute("SELECT node_name, node_id FROM administrative_hierarchy WHERE district_name = ?", (chosen_district,)).fetchall()
-    # FIX: Explicitly unpack the query row tuple into string keys and values
-    facility_map = {row[0]: row[1] for row in fac_cursor}
+    
+    # FIX 2: Explicitly separate the query row elements (name and id string elements) to build a clean lookup map
+    facility_map = {name: node_id for name, node_id in fac_cursor}
     
     chosen_facility_name = st.sidebar.selectbox(ln["select_facility"], list(facility_map.keys()))
     target_node_id = facility_map[chosen_facility_name]
@@ -91,7 +94,8 @@ if not st.session_state.authenticated:
     conn.close()
     
     st.sidebar.markdown(f"**🩺 {ln['avail_docs']}:**")
-    for d in doc_rows: st.sidebar.caption(f"• {d[0]} ({d[1]})")
+    for doc_name, spec in doc_rows: 
+        st.sidebar.caption(f"• {doc_name} ({spec})")
 
     st.title(ln["login_title"])
     st.caption(f"{ln['login_sub']} | Routing Target: `{target_node_id}`")
