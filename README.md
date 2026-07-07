@@ -159,7 +159,7 @@ Follow these exact operational walkthroughs to demonstrate your end-to-end archi
 4. Log out, maintain the location context, and log back in under **Dr. K. Venkataswamy** using password: `MedicalDoc123`.
 5. Locate the newly logged triage case. Toggle the consulting mode to *e-Sanjeevani Video Call Telehealth* to review video gates. Move to the *Formulate Digital Medical Prescription* panel, choose a medicine, type dosage instructions, and click **Issue Prescription to Pharmacy**.
 6. Log out and log back into the same center as **pharma_srikakulam_rur** (password: `PharmaStore456`). Toggle the active distribution mode to *Drone-Routed Aero Resupply*. You will see the doctor's prescription securely routed to the fulfillment queue. Click **Authorize Autonomous Drone Resupply Delivery** to fire the UAV simulation.
-
+   
 ### Walkthrough B: Cross-District Secure Data Protection Block
 1. Choose **Dr. S. Srinivasa Rao** from the username dropdown. This practitioner belongs to **Visakhapatnam**.
 2. Intentionally change the sidebar location selector to a different territory context: **Srikakulam** ➡️ **Palasa Super-Specialty Spoke**.
