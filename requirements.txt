@@ -1,7 +1,5 @@
 streamlit
-panda
-numpy
+pandas
 matplotlib
-sqlite3
 google-genai
 pydantic
