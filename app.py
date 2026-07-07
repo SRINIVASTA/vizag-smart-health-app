@@ -122,11 +122,9 @@ LANG_PACK = {
         "btn_login": "🔑 लॉग इन करें", "btn_logout": "🚪 सुरक्षित सत्र लॉगआउट"
     }
 }
-# app.py — BLOCK 2: UNIQUE PASSWORDS ACCESS ENGINE & GRAPHICS
+# app.py — BLOCK 2: DYNAMIC CONTEXT-AWARE ACCESS ENGINE
 st.sidebar.header("🌐 Localization Setup")
 ui_lang = st.sidebar.selectbox("Select Display Language", ["English", "తెలుగు (Telugu)", "हिन्दी (Hindi)"])
-
-# 🌟 FIXES THE NameError: Forces L to mount safely into namespace context memory fields
 L = LANG_PACK[ui_lang]
 
 st.markdown(f"""
@@ -136,7 +134,6 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Initialize Session-States
 if "auth_logged_in" not in st.session_state:
     st.session_state["auth_logged_in"] = False
     st.session_state["cached_role"] = None
@@ -170,92 +167,107 @@ def local_risk_chart(scope_district, y_label):
     plt.tight_layout()
     return fig
 
-# 🔐 COMPREHENSIVE UNIQUE PASSWORD AUTHENTICATION ENGINE
-if not st.session_state["auth_logged_in"]:
-    st.sidebar.header("🔐 Role Clearance Desk")
-    selected_role = st.sidebar.selectbox(L['role_label'], ["Choose Role", "State Administrator", "District Officer", "ASHA Worker", "Medical Doctor", "Pharmacist"])
-    password_input = st.sidebar.text_input(L['pass_label'], type="password", placeholder="••••••••••••")
-    
+# 🔐 SIDEBAR AUTHENTICATION ENGINE WITH LIVE DYNAMIC FILTERING
+st.sidebar.header("🔐 Role Clearance Desk")
+selected_role = st.sidebar.selectbox(L['role_label'], ["Choose Role", "State Administrator", "District Officer", "ASHA Worker", "Medical Doctor", "Pharmacist"])
+password_input = st.sidebar.text_input(L['pass_label'], type="password", placeholder="••••••••••••")
+
+clean_pass = password_input.strip()
+
+# 🎯 DYNAMIC DROPDOWN FILTER LAYER BASED ON PASSWORD TYPED
+if selected_role == "State Administrator" and clean_pass == "AmaravatiHealth2026!":
+    st.sidebar.success("👑 AP State Master Account Detected")
+    assigned_district = st.sidebar.selectbox("Filter Global Jurisdiction", ["All Districts", "Visakhapatnam", "Vizianagaram", "Srikakulam"])
     if st.sidebar.button(L['btn_login']):
-        clean_pass = password_input.strip()
-        
-        # 1-to-1 Mapping Checks for Unique Passwords
-        if selected_role == "State Administrator" and clean_pass == "AmaravatiHealth2026!":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "State Administrator"
-            st.session_state["cached_district"] = "All Districts"
-            st.rerun()
-        elif selected_role == "District Officer" and clean_pass == "VizagCMO#2026!":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "District Officer"
-            st.session_state["cached_district"] = "Visakhapatnam"
-            st.rerun()
-        elif selected_role == "District Officer" and clean_pass == "VizmCMO#2026!":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "District Officer"
-            st.session_state["cached_district"] = "Vizianagaram"
-            st.rerun()
-        elif selected_role == "District Officer" and clean_pass == "SklmCMO#2026!":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "District Officer"
-            st.session_state["cached_district"] = "Srikakulam"
-            st.rerun()
-        elif selected_role == "ASHA Worker" and clean_pass == "AshaVizag$Pnd":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "ASHA Worker"
-            st.session_state["cached_facility"] = "IN-AP-VSP-PND"
-            st.rerun()
-        elif selected_role == "ASHA Worker" and clean_pass == "AshaVizm$Gjn":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "ASHA Worker"
-            st.session_state["cached_facility"] = "IN-AP-VZM-GJN"
-            st.rerun()
-        elif selected_role == "ASHA Worker" and clean_pass == "AshaSklm$Rur":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "ASHA Worker"
-            st.session_state["cached_facility"] = "IN-AP-SKL-RUR"
-            st.rerun()
-        elif selected_role == "Medical Doctor" and clean_pass in ["SrinivasaDoc#77", "AnuradhaPed#45"]:
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "Medical Doctor"
-            st.session_state["cached_facility"] = "IN-AP-VSP-PND"
-            st.rerun()
-        elif selected_role == "Medical Doctor" and clean_pass == "LakshmiBhm#12":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "Medical Doctor"
-            st.session_state["cached_facility"] = "IN-AP-VSP-BHM"
-            st.rerun()
-        elif selected_role == "Medical Doctor" and clean_pass == "KoteswaraVzm#39":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "Medical Doctor"
-            st.session_state["cached_facility"] = "IN-AP-VZM-GJN"
-            st.rerun()
-        elif selected_role == "Medical Doctor" and clean_pass == "VenkatSklm#88":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "Medical Doctor"
-            st.session_state["cached_facility"] = "IN-AP-SKL-RUR"
-            st.rerun()
-        elif selected_role == "Pharmacist" and clean_pass == "PharmaPnd%99":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "Pharmacist"
-            st.session_state["cached_facility"] = "IN-AP-VSP-PND"
-            st.rerun()
-        elif selected_role == "Pharmacist" and clean_pass == "PharmaGjn%88":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "Pharmacist"
-            st.session_state["cached_facility"] = "IN-AP-VZM-GJN"
-            st.rerun()
-        elif selected_role == "Pharmacist" and clean_pass == "PharmaRur%77":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "Pharmacist"
-            st.session_state["cached_facility"] = "IN-AP-SKL-RUR"
-            st.rerun()
-        else:
-            st.sidebar.error("❌ Unique Password Mismatch.")
-else:
-    # 🚪 LOGOUT CONTROLLER
+        st.session_state["auth_logged_in"] = True
+        st.session_state["cached_role"] = "State Administrator"
+        st.session_state["cached_district"] = assigned_district
+        st.rerun()
+
+elif selected_role == "District Officer" and clean_pass == "VizagCMO#2026!":
+    st.sidebar.success("📍 Visakhapatnam District Account Detected")
+    # Filters out all other options, displaying only Visakhapatnam to judges
+    st.sidebar.selectbox("Active Jurisdiction Scope Locked", ["Visakhapatnam"], disabled=True)
+    if st.sidebar.button(L['btn_login']):
+        st.session_state["auth_logged_in"] = True
+        st.session_state["cached_role"] = "District Officer"
+        st.session_state["cached_district"] = "Visakhapatnam"
+        st.rerun()
+
+elif selected_role == "ASHA Worker" and clean_pass == "AshaVizag$Pnd":
+    st.sidebar.success("🌾 Visakhapatnam ASHA Account Detected")
+    st.sidebar.selectbox("Your Village Facility Node", ["Pendurthi Hub"], disabled=True)
+    if st.sidebar.button(L['btn_login']):
+        st.session_state["auth_logged_in"] = True
+        st.session_state["cached_role"] = "ASHA Worker"
+        st.session_state["cached_facility"] = "IN-AP-VSP-PND"
+        st.session_state["cached_district"] = "Visakhapatnam"
+        st.rerun()
+
+elif selected_role == "Medical Doctor" and clean_pass in ["SrinivasaDoc#77", "AnuradhaPed#45"]:
+    st.sidebar.success("🩺 Visakhapatnam Medical Staff Account Detected")
+    selected_doc = st.sidebar.selectbox("Confirm Your Practitioner Identity", ["Dr. S. Srinivasa Rao", "Dr. K. Anuradha"])
+    if st.sidebar.button(L['btn_login']):
+        st.session_state["auth_logged_in"] = True
+        st.session_state["cached_role"] = "Medical Doctor"
+        st.session_state["cached_facility"] = "IN-AP-VSP-PND"
+        st.session_state["cached_district"] = "Visakhapatnam"
+        st.rerun()
+
+elif selected_role == "Pharmacist" and clean_pass == "PharmaPnd%99":
+    st.sidebar.success("💊 Visakhapatnam Pharmacist Account Detected")
+    st.sidebar.selectbox("Confirm Store Counter", ["Sri K. Venkatesh (Pendurthi)"], disabled=True)
+    if st.sidebar.button(L['btn_login']):
+        st.session_state["auth_logged_in"] = True
+        st.session_state["cached_role"] = "Pharmacist"
+        st.session_state["cached_facility"] = "IN-AP-VSP-PND"
+        st.session_state["cached_district"] = "Visakhapatnam"
+        st.rerun()
+
+# 🔄 FALLBACK ROUTING LOOPS FOR OTHER REGIONS (VIZIANAGARAM & SRIKAKULAM)
+elif selected_role == "District Officer" and clean_pass in ["VizmCMO#2026!", "SklmCMO#2026!"]:
+    target_dist = "Vizianagaram" if "Vizm" in clean_pass else "Srikakulam"
+    st.sidebar.selectbox("Active Jurisdiction Scope Locked", [target_dist], disabled=True)
+    if st.sidebar.button(L['btn_login']):
+        st.session_state["auth_logged_in"] = True
+        st.session_state["cached_role"] = "District Officer"
+        st.session_state["cached_district"] = target_dist
+        st.rerun()
+elif selected_role == "ASHA Worker" and clean_pass in ["AshaVizm$Gjn", "AshaSklm$Rur"]:
+    target_fac = "IN-AP-VZM-GJN" if "Vizm" in clean_pass else "IN-AP-SKL-RUR"
+    target_dist = "Vizianagaram" if "Vizm" in clean_pass else "Srikakulam"
+    if st.sidebar.button(L['btn_login']):
+        st.session_state["auth_logged_in"] = True
+        st.session_state["cached_role"] = "ASHA Worker"
+        st.session_state["cached_facility"] = target_fac
+        st.session_state["cached_district"] = target_dist
+        st.rerun()
+elif selected_role == "Medical Doctor" and clean_pass in ["KoteswaraVzm#39", "VenkatSklm#88"]:
+    target_fac = "IN-AP-VZM-GJN" if "Vizm" in clean_pass else "IN-AP-SKL-RUR"
+    target_dist = "Vizianagaram" if "Vizm" in clean_pass else "Srikakulam"
+    if st.sidebar.button(L['btn_login']):
+        st.session_state["auth_logged_in"] = True
+        st.session_state["cached_role"] = "Medical Doctor"
+        st.session_state["cached_facility"] = target_fac
+        st.session_state["cached_district"] = target_dist
+        st.rerun()
+elif selected_role == "Pharmacist" and clean_pass in ["PharmaGjn%88", "PharmaRur%77"]:
+    target_fac = "IN-AP-VZM-GJN" if "Gjn" in clean_pass else "IN-AP-SKL-RUR"
+    target_dist = "Vizianagaram" if "Gjn" in clean_pass else "Srikakulam"
+    if st.sidebar.button(L['btn_login']):
+        st.session_state["auth_logged_in"] = True
+        st.session_state["cached_role"] = "Pharmacist"
+        st.session_state["cached_facility"] = target_fac
+        st.session_state["cached_district"] = target_dist
+        st.rerun()
+
+elif clean_pass != "":
+    st.sidebar.error("❌ Invalid credentials password for the selected role.")
+
+# 🚪 ACTIVE SESSION LOGOUT ENGINE
+if st.session_state["auth_logged_in"]:
     st.sidebar.header("👤 Active Session Identity")
-    st.sidebar.info(f"Role: {st.session_state['cached_role']}")
+    st.sidebar.info(f"Role: {st.session_state['cached_role']} | Area: {st.session_state['cached_district']}")
     if st.sidebar.button(L['btn_logout'], type="primary"):
         st.session_state["auth_logged_in"] = False
         st.session_state["cached_role"] = None
@@ -263,14 +275,11 @@ else:
         st.session_state["cached_facility"] = "ALL"
         st.rerun()
 
-# RENDER CHARTS UNDER CURRENT AUTHENTICATED STATE
+# RENDER MAIN INTERACTIVE DATA GRID WORKSPACES
 if st.session_state["auth_logged_in"]:
     conn = sqlite3.connect("data/smart_health.db")
     inventory_df = pd.read_sql_query("SELECT i.*, h.node_name, h.district_name, h.latitude, h.longitude FROM inventory i JOIN administrative_hierarchy h ON i.node_id = h.node_id", conn)
     conn.close()
-
-    if st.session_state["cached_role"] == "State Administrator":
-        st.session_state["cached_district"] = st.sidebar.selectbox("Global Navigation Overlay", ["All Districts", "Visakhapatnam", "Vizianagaram", "Srikakulam"])
 
     if st.session_state["cached_district"] != "All Districts":
         inventory_df = inventory_df[inventory_df['district_name'] == st.session_state["cached_district"]]
