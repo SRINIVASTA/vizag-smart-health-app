@@ -273,7 +273,7 @@ if st.session_state["auth_logged_in"]:
         col_g1, col_g2 = st.columns(2)
         with col_g1: st.pyplot(local_stock_chart(inventory_df, L['stock_title']))
         with col_g2: st.pyplot(local_risk_chart(st.session_state["cached_district"], L['risk_title']))
-# app.py — BLOCK 3: CLINICAL LOOPS WORKSPACES & DISPATCH ENGINE
+# app.py — BLOCK 3: PART A (FRONT-END WORKFLOW INTERFACES)
 
 # Ensure Block 3 only executes if the user has a valid active login session matrix
 if st.session_state["auth_logged_in"]:
@@ -295,8 +295,8 @@ if st.session_state["auth_logged_in"]:
             if st.form_submit_button(L['submit_intake']):
                 conn = sqlite3.connect("data/smart_health.db")
                 cursor = conn.cursor()
-                # 🌟 FIX: Index [0] added to extract raw count from fetchone tuple safely
-                token = f"AP-{cursor.execute('SELECT COUNT(*) FROM patient_triage_queue').fetchone()[0] + 1001}"
+                count_tuple = cursor.execute('SELECT COUNT(*) FROM patient_triage_queue').fetchone()[0]
+                token = f"AP-{count_tuple + 1001}"
                 vitals_summary = f"{symptoms} | BP: {sys_bp}/{dia_bp} mmHg | Mode: {consult_mode}"
                 cursor.execute("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, 'WAITING')", (token, st.session_state["cached_facility"], "sha256_hash", pt_phone, vitals_summary))
                 conn.commit()
@@ -304,7 +304,7 @@ if st.session_state["auth_logged_in"]:
                 st.success(f"🎉 Saved! Token Assigned: **{token}**")
 
     # -------------------------------------------------------------
-    # ROLE WORKFLOW VIEW 2: DOCTOR EVALUATION POOL
+    # ROLE WORKFLOW VIEW 2: DOCTOR EVALUATION POOL WITH AUTOMATED VIDEO CALL PANEL
     # -------------------------------------------------------------
     elif st.session_state["cached_role"] == "Medical Doctor":
         st.subheader(L['doc_title'])
@@ -313,6 +313,36 @@ if st.session_state["auth_logged_in"]:
         conn.close()
         
         if not waiting_df.empty:
+            video_cases = waiting_df[waiting_df['symptoms_logged'].str.contains("e-Sanjeevani", na=False)]
+            
+            if not video_cases.empty:
+                # 🔊 Trigger text-to-speech voice notification natively via browser
+                st.components.v1.html("""
+                    <script>
+                        var msg = new SpeechSynthesisUtterance();
+                        msg.text = "Attention Doctor. A new e Sanjeevani Telehealth patient has joined via incoming video stream request. Please launch call connection.";
+                        msg.rate = 1.0; msg.pitch = 1.0;
+                        window.speechSynthesis.speak(msg);
+                    </script>
+                """, height=0, width=0)
+                st.warning("🔔 **Voice Alert Triggered:** Incoming e-Sanjeevani Video Call stream broadcasted aloud via system voice synthesis.")
+                
+                # 📹 Simulated HD Telehealth consultation frame layout
+                st.markdown("""
+                    <div style='background-color:#1E1E1E; padding:20px; border-radius:10px; border:2px solid #007BFF; text-align:center; margin-bottom:20px;'>
+                        <h4 style='color:#007BFF; margin-top:0;'>📹 e-Sanjeevani Core Hub: Connected Tele-Consultation Stream</h4>
+                        <div style='display:flex; justify-content:space-around; align-items:center; flex-wrap:wrap; margin:15px 0;'>
+                            <div style='background-color:#333; width:220px; height:140px; border-radius:5px; display:flex; align-items:center; justify-content:center; border:1px solid #555;'>
+                                <span style='color:#FFF; font-size:12px;'>🩺 Doctor View (Local Camera)</span>
+                            </div>
+                            <div style='background-color:#444; width:220px; height:140px; border-radius:5px; display:flex; align-items:center; justify-content:center; border:1px solid #FFC107;'>
+                                <span style='color:#FFC107; font-size:12px; font-weight:bold;'>🌾 Rural Patient Stream (Connected)</span>
+                            </div>
+                        </div>
+                        <p style='color:#28A745; font-size:13px; font-weight:bold; margin:5px 0;'>🟢 WebRTC Telehealth Secure Audio-Video Encryption Pipeline Active</p>
+                    </div>
+                """, unsafe_allow_html=True)
+            
             st.dataframe(waiting_df[['token_id', 'symptoms_logged']], use_container_width=True, hide_index=True)
             with st.form("doc_prescription_form"):
                 target_token = st.selectbox(L['select_pt'], waiting_df['token_id'].tolist())
@@ -327,8 +357,7 @@ if st.session_state["auth_logged_in"]:
                     cursor.execute("INSERT INTO patient_prescriptions (token_id, node_id, doctor_name, medication_name, dosage_instructions, consult_mode, status) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')",
                                    (target_token, st.session_state["cached_facility"], "Attending Doctor", rx_med, rx_dose, mode))
                     cursor.execute("UPDATE patient_triage_queue SET status = 'COMPLETED' WHERE token_id = ?", (target_token,))
-                    conn.commit()
-                    conn.close()
+                    conn.commit() conn.close()
                     st.success("🏥 Prescription Transmitted to Pharmacy Desk!")
                     st.rerun()
         else:
@@ -355,14 +384,12 @@ if st.session_state["auth_logged_in"]:
                     rx_item = cursor.execute("SELECT medication_name FROM patient_prescriptions WHERE prescription_id = ?", (target_rx,)).fetchone()[0]
                     cursor.execute("UPDATE inventory SET current_stock = current_stock - 1 WHERE node_id = ? AND item_name = ?", (st.session_state["cached_facility"], rx_item))
                     cursor.execute("UPDATE patient_prescriptions SET status = 'FULFILLED' WHERE prescription_id = ?", (target_rx,))
-                    conn.commit()
-                    conn.close()
+                    conn.commit() conn.close()
                     st.success(f"✅ Order #{target_rx} Dispatched!")
-                    if "Drone" in delivery_method:
-                        st.warning(f"✈️ Launching drone resupply payload formulation via coordinates.")
+                    if "Drone" in delivery_method: st.warning(f"✈️ Launching drone resupply payload.")
                     st.rerun()
-        else:
-            st.success("🟢 No pending orders require processing at your pharmacy unit.")
+        else: st.success("🟢 No pending orders require processing at your pharmacy unit.")
+# app.py — BLOCK 3: PART B (GATED SURVEILLANCE & AI DEMAND LOGS)
 
     # -------------------------------------------------------------
     # 📋 STRICT LOCATION-GATED ADMINISTRATIVE SURVEILLANCE LEDGER
@@ -376,12 +403,11 @@ if st.session_state["auth_logged_in"]:
         """, conn)
         conn.close()
         
-        # 🎯 STRICT GEOGRAPHICAL BOUNDARY FILTRATION
+        # 🎯 GEOGRAPHICAL BOUNDARY FILTRATION (Blocks data leakage across districts)
         if st.session_state["cached_district"] != "All Districts":
             global_triage = global_triage[global_triage['district_name'] == st.session_state["cached_district"]]
             
         st.subheader(f"📋 Administrative Triage Ledger: [{st.session_state['cached_district']}] Scope")
-        
         if not global_triage.empty:
             st.dataframe(global_triage[['token_id', 'node_name', 'symptoms_logged', 'status']], use_container_width=True, hide_index=True)
         else:
