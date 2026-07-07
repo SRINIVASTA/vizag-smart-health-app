@@ -119,117 +119,56 @@ LANG_PACK = {
         "btn_login": "🔑 लॉग इन करें", "btn_logout": "🚪 सुरक्षित सत्र लॉगआउट"
     }
 }
-# app.py — BLOCK 2: SECURE SESSION ENGINE & CHARTS PLOTS
-st.sidebar.header("🌐 Localization Setup")
-ui_lang = st.sidebar.selectbox("Select Display Language", ["English", "తెలుగు (Telugu)", "हिन्दी (Hindi)"])
-L = LANG_PACK[ui_lang]
+# app.py — Block 2 (Updated Security Dictionary Segment)
 
-st.markdown(f"""
-    <div style='background-color:#003A70;padding:15px;border-radius:10px;margin-bottom:20px'>
-        <h1 style='color:white;margin:0;font-family:sans-serif;'>{L['title']}</h1>
-        <p style='color:#FFC107;margin:5px 0 0 0;'>{L['subtitle']}</p>
-    </div>
-""", unsafe_allow_html=True)
+# 🔐 SIDEBAR AUTHENTICATION ENGINE
+st.sidebar.header("🔐 Role Clearance Desk")
+selected_role = st.sidebar.selectbox(L['role_label'], ["Choose Role", "State Administrator", "District Officer", "ASHA Worker", "Medical Doctor", "Pharmacist"])
+password_input = st.sidebar.text_input(L['pass_label'], type="password", placeholder="••••••••••••")
 
-# 🔄 STATE MEMORY CACHE WRAPPERS
-if "auth_logged_in" not in st.session_state:
-    st.session_state["auth_logged_in"] = False
-    st.session_state["cached_role"] = None
-    st.session_state["cached_district"] = "All Districts"
-    st.session_state["cached_facility"] = "ALL"
+authenticated, assigned_district, assigned_facility = False, "All Districts", "ALL"
 
-def local_stock_chart(df, title_txt):
-    fig, ax = plt.subplots(figsize=(7, 3.2))
-    df_sorted = df.sort_values(by='current_stock')
-    colors = ['#DC3545' if x <= r['min_required_threshold'] else '#28A745' for x, r in zip(df_sorted['current_stock'], df_sorted.to_dict('records'))]
-    bars = ax.barh(df_sorted['node_name'], df_sorted['current_stock'], color=colors, height=0.5)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.set_title(title_txt, fontsize=10, fontweight='bold')
-    plt.tight_layout()
-    return fig
+# Explicit 1-to-1 matching parameters for unique password structures
+if selected_role == "State Administrator" and password_input == "AmaravatiHealth2026!":
+    authenticated = True
+    assigned_district = st.sidebar.selectbox("Filter Global Jurisdiction", ["All Districts", "Visakhapatnam", "Vizianagaram", "Srikakulam"])
 
-def local_risk_chart(scope_district, y_label):
-    conn = sqlite3.connect("data/smart_health.db")
-    df = pd.read_sql_query("SELECT h.node_name, o.active_epidemic_risk_score, h.district_name FROM node_operations o JOIN administrative_hierarchy h ON o.node_id = h.node_id", conn)
-    conn.close()
-    if scope_district != "All Districts" and scope_district is not None:
-        df = df[df['district_name'] == scope_district]
-    fig, ax = plt.subplots(figsize=(7, 3.2))
-    ax.bar(df['node_name'], df['active_epidemic_risk_score'], color='#007BFF', alpha=0.85, width=0.3)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.set_ylabel(y_label, fontsize=9, fontweight='bold')
-    ax.set_ylim(0, 1.0)
-    plt.xticks(rotation=10, ha='right', fontsize=8)
-    plt.tight_layout()
-    return fig
+elif selected_role == "District Officer":
+    if password_input == "VizagCMO#2026!":
+        authenticated, assigned_district = True, "Visakhapatnam"
+    elif password_input == "VizmCMO#2026!":
+        authenticated, assigned_district = True, "Vizianagaram"
+    elif password_input == "SklmCMO#2026!":
+        authenticated, assigned_district = True, "Srikakulam"
 
-# 🔐 COMPREHENSIVE INTERACTIVE AUTHENTICATION HANDSHAKE WIDGET
-if not st.session_state["auth_logged_in"]:
-    st.sidebar.header("🔐 Role Clearance Desk")
-    selected_role = st.sidebar.selectbox(L['role_label'], ["Choose Role", "State Administrator", "District Officer", "ASHA Worker", "Medical Doctor", "Pharmacist"])
-    password_input = st.sidebar.text_input(L['pass_label'], type="password", placeholder="••••••••••••")
-    
-    if st.sidebar.button(L['btn_login']):
-        if selected_role == "State Administrator" and password_input == "AmaravatiHealth2026!":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "State Administrator"
-            st.session_state["cached_district"] = "All Districts"
-            st.rerun()
-        elif selected_role == "District Officer" and password_input == "VizagDSU99!":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "District Officer"
-            st.session_state["cached_district"] = "Visakhapatnam"
-            st.rerun()
-        elif selected_role == "ASHA Worker" and password_input == "VillageASHA456":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "ASHA Worker"
-            st.session_state["cached_facility"] = "IN-AP-VSP-PND"
-            st.rerun()
-        elif selected_role == "Medical Doctor" and password_input == "MedicalDoc123":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "Medical Doctor"
-            st.session_state["cached_facility"] = "IN-AP-VSP-PND"
-            st.rerun()
-        elif selected_role == "Pharmacist" and password_input == "PharmaStore456":
-            st.session_state["auth_logged_in"] = True
-            st.session_state["cached_role"] = "Pharmacist"
-            st.session_state["cached_facility"] = "IN-AP-VSP-PND"
-            st.rerun()
-        else:
-            st.sidebar.error("❌ Authentication Mismatch.")
-else:
-    # 🚪 LIVE SECURE SESSION LOGOUT TRIGGER MECHANISM
-    st.sidebar.header("👤 Active Session Identity")
-    st.sidebar.info(f"Role: {st.session_state['cached_role']}")
-    
-    if st.sidebar.button(L['btn_logout'], type="primary"):
-        # Explicit cache memory destruction parameters
-        st.session_state["auth_logged_in"] = False
-        st.session_state["cached_role"] = None
-        st.session_state["cached_district"] = "All Districts"
-        st.session_state["cached_facility"] = "ALL"
-        st.success("Session dropped. Re-locking boundaries.")
-        st.rerun()
+elif selected_role == "ASHA Worker":
+    if password_input == "AshaVizag$Pnd":
+        authenticated, assigned_facility = True, "IN-AP-VSP-PND"
+    elif password_input == "AshaVizm$Gjn":
+        authenticated, assigned_facility = True, "IN-AP-VZM-GJN"
+    elif password_input == "AshaSklm$Rur":
+        authenticated, assigned_facility = True, "IN-AP-SKL-RUR"
 
-# RUN COMPONENT VIEWS BASED ON RESOLVED LOGGED CONTEXT STATES
-if st.session_state["auth_logged_in"]:
-    conn = sqlite3.connect("data/smart_health.db")
-    inventory_df = pd.read_sql_query("SELECT i.*, h.node_name, h.district_name, h.latitude, h.longitude FROM inventory i JOIN administrative_hierarchy h ON i.node_id = h.node_id", conn)
-    conn.close()
+elif selected_role == "Medical Doctor":
+    if password_input == "SrinivasaDoc#77" or password_input == "AnuradhaPed#45":
+        authenticated, assigned_facility = True, "IN-AP-VSP-PND"
+    elif password_input == "LakshmiBhm#12":
+        authenticated, assigned_facility = True, "IN-AP-VSP-BHM"
+    elif password_input == "KoteswaraVzm#39":
+        authenticated, assigned_facility = True, "IN-AP-VZM-GJN"
+    elif password_input == "VenkatSklm#88":
+        authenticated, assigned_facility = True, "IN-AP-SKL-RUR"
 
-    if st.session_state["cached_role"] == "State Administrator":
-        st.session_state["cached_district"] = st.sidebar.selectbox("Global Navigation Overlay", ["All Districts", "Visakhapatnam", "Vizianagaram", "Srikakulam"])
+elif selected_role == "Pharmacist":
+    if password_input == "PharmaPnd%99":
+        authenticated, assigned_facility = True, "IN-AP-VSP-PND"
+    elif password_input == "PharmaGjn%88":
+        authenticated, assigned_facility = True, "IN-AP-VZM-GJN"
+    elif password_input == "PharmaRur%77":
+        authenticated, assigned_facility = True, "IN-AP-SKL-RUR"
 
-    if st.session_state["cached_district"] != "All Districts":
-        inventory_df = inventory_df[inventory_df['district_name'] == st.session_state["cached_district"]]
-
-    if st.session_state["cached_role"] in ["State Administrator", "District Officer"]:
-        st.subheader(f"📊 Surveillance Matrix Operations Pool: [{st.session_state['cached_district']}]")
-        col_g1, col_g2 = st.columns(2)
-        with col_g1: st.pyplot(local_stock_chart(inventory_df, L['stock_title']))
-        with col_g2: st.pyplot(local_risk_chart(st.session_state["cached_district"], L['risk_title']))
+elif password_input != "":
+    st.sidebar.error("❌ Invalid clearance password credentials for the selected role.")
 # app.py — BLOCK 3: CLINICAL LOOPS WORKSPACES
     st.markdown("---")
     
