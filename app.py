@@ -295,7 +295,8 @@ if st.session_state["auth_logged_in"]:
             if st.form_submit_button(L['submit_intake']):
                 conn = sqlite3.connect("data/smart_health.db")
                 cursor = conn.cursor()
-                token = f"AP-{cursor.execute('SELECT COUNT(*) FROM patient_triage_queue').fetchone() + 1001}"
+                # 🌟 FIX: Index [0] added to extract raw count from fetchone tuple safely
+                token = f"AP-{cursor.execute('SELECT COUNT(*) FROM patient_triage_queue').fetchone()[0] + 1001}"
                 vitals_summary = f"{symptoms} | BP: {sys_bp}/{dia_bp} mmHg | Mode: {consult_mode}"
                 cursor.execute("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, 'WAITING')", (token, st.session_state["cached_facility"], "sha256_hash", pt_phone, vitals_summary))
                 conn.commit()
@@ -321,7 +322,7 @@ if st.session_state["auth_logged_in"]:
                 if st.form_submit_button(L['sign_rx']):
                     conn = sqlite3.connect("data/smart_health.db")
                     cursor = conn.cursor()
-                    vitals_txt = cursor.execute("SELECT symptoms_logged FROM patient_triage_queue WHERE token_id = ?", (target_token,)).fetchone()
+                    vitals_txt = cursor.execute("SELECT symptoms_logged FROM patient_triage_queue WHERE token_id = ?", (target_token,)).fetchone()[0]
                     mode = "e-Sanjeevani Video Call Telehealth" if "Video" in vitals_txt else "Physical Local OPD Desk"
                     cursor.execute("INSERT INTO patient_prescriptions (token_id, node_id, doctor_name, medication_name, dosage_instructions, consult_mode, status) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')",
                                    (target_token, st.session_state["cached_facility"], "Attending Doctor", rx_med, rx_dose, mode))
@@ -351,7 +352,7 @@ if st.session_state["auth_logged_in"]:
                 if st.form_submit_button(L['dispatch']):
                     conn = sqlite3.connect("data/smart_health.db")
                     cursor = conn.cursor()
-                    rx_item = cursor.execute("SELECT medication_name FROM patient_prescriptions WHERE prescription_id = ?", (target_rx,)).fetchone()
+                    rx_item = cursor.execute("SELECT medication_name FROM patient_prescriptions WHERE prescription_id = ?", (target_rx,)).fetchone()[0]
                     cursor.execute("UPDATE inventory SET current_stock = current_stock - 1 WHERE node_id = ? AND item_name = ?", (st.session_state["cached_facility"], rx_item))
                     cursor.execute("UPDATE patient_prescriptions SET status = 'FULFILLED' WHERE prescription_id = ?", (target_rx,))
                     conn.commit()
@@ -364,7 +365,7 @@ if st.session_state["auth_logged_in"]:
             st.success("🟢 No pending orders require processing at your pharmacy unit.")
 
     # -------------------------------------------------------------
-    # 📋 FIXED: STRICT LOCATION-GATED ADMINISTRATIVE SURVEILLANCE LEDGER
+    # 📋 STRICT LOCATION-GATED ADMINISTRATIVE SURVEILLANCE LEDGER
     # -------------------------------------------------------------
     elif st.session_state["cached_role"] in ["State Administrator", "District Officer"]:
         conn = sqlite3.connect("data/smart_health.db")
@@ -382,7 +383,6 @@ if st.session_state["auth_logged_in"]:
         st.subheader(f"📋 Administrative Triage Ledger: [{st.session_state['cached_district']}] Scope")
         
         if not global_triage.empty:
-            # Exclude the verification check filter index before rendering data to judges
             st.dataframe(global_triage[['token_id', 'node_name', 'symptoms_logged', 'status']], use_container_width=True, hide_index=True)
         else:
             st.info(f"🟢 Clearance Status: No active records logged within {st.session_state['cached_district']}.")
