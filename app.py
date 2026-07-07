@@ -168,6 +168,7 @@ with col_right:
         
     st.dataframe(doc_df[['doctor_name', 'node_name', 'Duty_Status']], use_container_width=True, hide_index=True)
 # app.py — BLOCK 3: AI DISPATCH GATEWAY
+# app.py — BLOCK 3: AI DISPATCH GATEWAY (UNRESTRICTED KEY VALIDATION)
 st.markdown("---")
 
 # ====================================================================
@@ -187,16 +188,20 @@ typed_password = st.text_input(
 typed_api_key = st.text_input(
     "🌐 Paste Your Private Gemini API Key", 
     type="password",
-    placeholder="AIzaSy...",
+    placeholder="Paste your Google AI Studio or Vertex API key...",
     help="Paste your private key here to authenticate the summary execution loop. It runs strictly in memory."
 )
 
 if st.button("✨ Generate AI Strategic Operational Mandate"):
+    # Clean inputs by stripping accidental prefix/suffix white spaces
+    clean_password = typed_password.strip()
+    clean_api_key = typed_api_key.strip()
+    
     # 1. Enforce strict matching parameter checks for your shared view passcode
-    if typed_password == "AmaravatiHealth2026!":
+    if clean_password == "AmaravatiHealth2026!":
         
-        # 2. Check if the private key field has been populated
-        if typed_api_key.startswith("AIzaSy"):
+        # 2. Accept any non-empty API key to support newer formatting frameworks (AIza, AQ, etc.)
+        if len(clean_api_key) > 5:
             with st.spinner("Access Granted. Communicating with Gemini Cloud Infrastructure nodes..."):
                 
                 from google import genai
@@ -204,7 +209,7 @@ if st.button("✨ Generate AI Strategic Operational Mandate"):
                 
                 try:
                     # Pass the key entered on screen directly into Google client constructor
-                    client = genai.Client(api_key=typed_api_key.strip())
+                    client = genai.Client(api_key=clean_api_key)
                     
                     # Convert the interactive Pandas monitoring table directly into string vectors
                     inventory_summary = inventory_df[['node_name', 'item_name', 'current_stock', 'min_required_threshold', 'daily_avg_consumption']].to_string()
@@ -225,9 +230,9 @@ if st.button("✨ Generate AI Strategic Operational Mandate"):
                 except Exception as e:
                     st.error(f"Gemini API Execution Error: {str(e)}")
         else:
-            st.error("❌ Key Authentication Failure: Please paste a valid Gemini API Key starting with 'AIzaSy' into the input block above.")
-    elif typed_password == "":
+            st.error("❌ Key Authentication Failure: Please paste your active Gemini API key into the input block above.")
+    elif clean_password == "":
         st.error("Access Denied: Please input the shared access system password.")
     else:
         st.error("❌ Invalid System Password! This unauthorized gateway boundary breach has been logged to your database audit tables.")
-        engine.log_audit_breach(typed_password)
+        engine.log_audit_breach(clean_password)
