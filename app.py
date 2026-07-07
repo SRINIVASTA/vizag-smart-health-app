@@ -2,7 +2,16 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
+import os
 import src.predictive_engine as engine
+
+# 🛠️ AUTOMATED ON-LAUNCH DATABASE CHECK ENGINE (Prevents DatabaseErrors)
+if not os.path.exists("data/smart_health.db") or os.path.getsize("data/smart_health.db") == 0:
+    try:
+        import seed_mock_data
+        seed_mock_data.execute_seeding_pipeline()
+    except Exception as e:
+        st.error(f"Critical Database Initialization Failure: {str(e)}")
 
 st.set_page_config(layout="wide", page_title="Bharat Health AI Command")
 
@@ -80,7 +89,6 @@ st.markdown("---")
 # 5. Secure Admin Gateway for Gemini AI Engine
 st.subheader("🤖 Gemini 2.5 Flash Autonomous Intervention Planner")
 
-# Mask the input box using type="password" to accept the simple access text safely
 typed_password = st.text_input(
     "🔑 Enter Password to Unlock AI Dispatch Engine", 
     type="password",
@@ -92,7 +100,6 @@ if st.button("✨ Generate AI Strategic Operational Mandate"):
     if typed_password == st.secrets["APP_ACCESS_PASSWORD"]:
         with st.spinner("Access Granted. Analyzing operational bottlenecks via Gemini..."):
             
-            # Securely retrieve the hidden backend API key to trigger the call
             real_key = st.secrets["GEMINI_API_KEY"]
             ai_payload = engine.generate_district_health_forecast(real_key, inventory_df, calculated_transfers)
             
