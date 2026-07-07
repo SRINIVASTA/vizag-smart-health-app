@@ -5,7 +5,7 @@ import sqlite3
 import os
 import src.predictive_engine as engine
 
-# 🛠️ EMBEDDED AUTOMATIC DATABASE CREATION ENGINE (Fixes the ModuleNotFoundError)
+# 🛠️ EMBEDDED AUTOMATIC DATABASE CREATION ENGINE
 def build_native_database_instance():
     """Constructs the local smart_health database node from the sql schema template file."""
     os.makedirs("data", exist_ok=True)
@@ -132,7 +132,7 @@ with col2:
 st.markdown("---")
 
 # 4. Display Real-Time Triage Queues and Clinical Personnel Metrics
-col_left, col_right = st.columns()
+col_left, col_right = st.columns(2)  # 🌟 FIXED: Explicitly specified 2 columns here
 
 with col_left:
     st.subheader("📋 Active Patient Triage Logs (Aadhaar Hashed)")
