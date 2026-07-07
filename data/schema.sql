@@ -1,14 +1,12 @@
--- ====================================================================
--- BHARAT HEALTH AI: PRODUCTION PILOT SCHEMA BLUEPRINT (ANDHRA PRADESH)
--- ====================================================================
+-- data/schema.sql
 
 -- 1. Hierarchical District & Facility Location Nodes Matrix
 CREATE TABLE IF NOT EXISTS administrative_hierarchy (
-    node_id TEXT PRIMARY KEY,       -- E.g., 'IN-AP-VSP-PND'
-    node_level TEXT NOT NULL,       -- 'Tehsil', 'District', 'State'
-    node_name TEXT NOT NULL,        -- E.g., 'Pendurthi CHC Hub'
-    state_name TEXT NOT NULL,       -- 'Andhra Pradesh'
-    district_name TEXT NOT NULL,    -- E.g., 'Visakhapatnam'
+    node_id TEXT PRIMARY KEY,       
+    node_level TEXT NOT NULL,       
+    node_name TEXT NOT NULL,        
+    state_name TEXT NOT NULL,       
+    district_name TEXT NOT NULL,    
     latitude REAL NOT NULL,
     longitude REAL NOT NULL
 );
@@ -27,7 +25,7 @@ CREATE TABLE IF NOT EXISTS doctors (
 CREATE TABLE IF NOT EXISTS asha_workers (
     asha_id TEXT PRIMARY KEY,
     node_id TEXT NOT NULL,
-    username TEXT UNIQUE NOT NULL,  -- E.g., 'asha_worker'
+    username TEXT UNIQUE NOT NULL,  
     worker_name TEXT NOT NULL,
     assigned_village TEXT NOT NULL,
     FOREIGN KEY (node_id) REFERENCES administrative_hierarchy(node_id)
@@ -37,7 +35,7 @@ CREATE TABLE IF NOT EXISTS asha_workers (
 CREATE TABLE IF NOT EXISTS pharmacists (
     pharma_id TEXT PRIMARY KEY,
     node_id TEXT NOT NULL,
-    username TEXT UNIQUE NOT NULL,  -- E.g., 'pharma_person'
+    username TEXT UNIQUE NOT NULL,  
     employee_name TEXT NOT NULL,
     FOREIGN KEY (node_id) REFERENCES administrative_hierarchy(node_id)
 );
@@ -55,26 +53,26 @@ CREATE TABLE IF NOT EXISTS inventory (
 
 -- 6. Unified Patient Flow Triage Queue 
 CREATE TABLE IF NOT EXISTS patient_triage_queue (
-    token_id TEXT PRIMARY KEY,      -- E.g., 'AP-1422'
+    token_id TEXT PRIMARY KEY,      
     node_id TEXT NOT NULL,
     aadhaar_hash TEXT NOT NULL,
     patient_phone TEXT NOT NULL,
     symptoms_logged TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'WAITING', -- 'WAITING', 'COMPLETED'
+    status TEXT NOT NULL DEFAULT 'WAITING', 
     FOREIGN KEY (node_id) REFERENCES administrative_hierarchy(node_id)
 );
 
--- 7. 🎯 NEW: CLOSED-LOOP PATIENT PRESCRIPTION ROUTING LEDGER
+-- 7. CLOSED-LOOP PATIENT PRESCRIPTION ROUTING LEDGER
 CREATE TABLE IF NOT EXISTS patient_prescriptions (
     prescription_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    token_id TEXT NOT NULL,         -- Links back to the patient record
-    node_id TEXT NOT NULL,          -- Facility indicator
+    token_id TEXT NOT NULL,         
+    node_id TEXT NOT NULL,          
     doctor_name TEXT NOT NULL,
     medication_name TEXT NOT NULL,
     dosage_instructions TEXT NOT NULL,
-    consult_mode TEXT NOT NULL,    -- 'Physical Local OPD Desk' or 'e-Sanjeevani Video Call Telehealth'
+    consult_mode TEXT NOT NULL,    
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    status TEXT NOT NULL DEFAULT 'PENDING', -- 'PENDING' or 'FULFILLED'
+    status TEXT NOT NULL DEFAULT 'PENDING', 
     FOREIGN KEY (token_id) REFERENCES patient_triage_queue(token_id),
     FOREIGN KEY (node_id) REFERENCES administrative_hierarchy(node_id)
 );
@@ -94,6 +92,6 @@ CREATE TABLE IF NOT EXISTS system_audit_logs (
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     user_role TEXT NOT NULL,
     node_id TEXT NOT NULL,
-    action_type TEXT NOT NULL,     -- 'LOGIN', 'PATIENT_INTAKE', 'PRESCRIPTION_ISSUE', 'MEDICINE_DISPENSE'
+    action_type TEXT NOT NULL,     
     details TEXT NOT NULL
 );
