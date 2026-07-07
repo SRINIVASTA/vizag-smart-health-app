@@ -1,4 +1,4 @@
-# app.py — BLOCK 1: INITIALIZATION & MULTI-LANGUAGE DIRECTORY
+# app.py — BLOCK 1: COMPONENT INITIALIZATION & MULTI-LANGUAGE DIRECTORY
 import streamlit as st
 import pandas as pd
 import sqlite3
@@ -77,7 +77,7 @@ if not os.path.exists("data/smart_health.db") or os.path.getsize("data/smart_hea
 
 st.set_page_config(layout="wide", page_title="Bharat Health AI Command")
 
-# 🌍 COMPREHENSIVE LOCALIZATION STRING MATRIX (English / Telugu / Hindi)
+# 🌍 COMPREHENSIVE LOCALIZATION STRING MATRIX
 LANG_PACK = {
     "English": {
         "title": "🌐 Bharat Health AI: Multi-Role Operations Matrix", "subtitle": "Track 3: Smart Health Dashboard — End-to-End Workflow Verification",
@@ -89,19 +89,21 @@ LANG_PACK = {
         "submit_intake": "📥 Push Triage Metrics to Clinical Queue", "doc_title": "🩺 Medical Practitioner Evaluation Pool", "select_pt": "Select Active Patient Token to Treat",
         "prescribe": "Prescribe Necessary Medical Formulation", "dosage": "Dosage Regulation Instructions", "sign_rx": "✍️ Authorize and Sign Digital Prescription",
         "pharma_title": "💊 Pharmacy Dispensation Desk & Aero-Logistics Network", "select_rx": "Select Prescription ID to Dispense", "logistics_path": "Fulfillment Logistics Path",
-        "dispatch": "🚀 Finalize Dispensation Order", "ai_title": "🤖 Gemini 2.5 Flash Autonomous Intervention Planner", "run_ai": "✨ Run AI Demand Analytics"
+        "dispatch": "🚀 Finalize Dispensation Order", "ai_title": "🤖 Gemini 2.5 Flash Autonomous Intervention Planner", "run_ai": "✨ Run AI Demand Analytics",
+        "btn_login": "🔑 Authenticate & Login", "btn_logout": "🚪 Secure Session Logout"
     },
     "తెలుగు (Telugu)": {
         "title": "🌐 భరత్ హెల్త్ AI: మల్టీ-రోల్ ఆపరేషన్స్ మేట్రిక్స్", "subtitle": "ట్రాక్ 3: స్మార్ట్ హెల్త్ డ్యాష్‌బోర్డ్ — ఎండ్-టు-ఎండ్ వర్క్‌ఫ్లో వెరిఫికేషన్",
         "lock_msg": "🔒 రికార్డులను అన్‌లాక్ చేయడానికి దయచేసి ఎడమ సైడ్‌బార్‌లో చెల్లుబాటు అయ్యే పాత్రను ఎంచుకుని, దాని పాస్‌వర్డ్‌ను నమోదు చేయండి.",
-        "role_label": "మీ సిస్టమ్ పాత్రను ఎంచుకోండి", "pass_label": "క్లియరెన్స్ పాస్‌వర్డ్ నమోదు చేయండి", "lang_label": "🌐 భాషను మార్చండి",
+        "role_label": "మీ సిస్టమ్ పాత్రను ఎంచుకోండి", "pass_label": "క్లియరెన్స్ పాస్‌వర్డ్ నమోదు చేయండి", "lang_label": "🌐 భాషను మార్चండి",
         "stock_title": "AI సప్లై క్షీణత & స్టాక్ గ్రిడ్ మానిటర్", "risk_title": "వ్యాధి వ్యాప్తి ప్రమాద గుణకం",
-        "asha_title": "ఆశా వర్కర్ రోగి రిజిస్ట్రేషన్ ఫారమ్", "pt_phone": "రోగి సంప్రదింపు మొబైల్ నంబర్", "symptoms": "రోగి లక్షణాల వివరణ",
+        "asha_title": "ఆశా వర్కర్ రోగి రిజిస్ట్రేషన్ ఫారమ్", "pt_phone": "రోగి సంప్రదింపు మొబైल నంబర్", "symptoms": "రోగి లక్షణాల వివరణ",
         "sys_bp": "సిస్టోలిక్ రక్తపోటు (Systolic BP)", "dia_bp": "డయాస్టోలిక్ రక్తపోటు (Diastolic BP)", "consult_mode": "అవసరమైన సంప్రదింపు విధానం",
-        "submit_intake": "📥 రోగి వివరాలను క్లినికల్ క్యూకు పంపండి", "doc_title": "🩺 వైద్యుల మూల్యాంకన పోర్టల్", "select_pt": "చికిత్స చేయడానికి రోగి టోకెన్‌ను ఎంచుకోండి",
+        "submit_intake": "📥 రోగి వివరాలను క్లినికल క్యూకు పంపండి", "doc_title": "🩺 వైద్యుల మూల్యాంకన పోర్టల్", "select_pt": "చికిత్స చేయడానికి రోగి టోకెన్‌ను ఎంచుకోండి",
         "prescribe": "అవసరమైన మందులను సూచించండి", "dosage": "మందుల వాడకం సూచనలు", "sign_rx": "✍️ డిజిటల్ ప్రిస్క్రిప్షన్‌ను ఆమోదించండి",
-        "pharma_title": "💊 ఫార్మసీ పంపిణీ డెస్క్ & డ్రోన్ లాజిస్టిక్స్", "select_rx": "పంపిణీ చేయడానికి ప్రిస్క్రిప్షన్ IDని ఎంచుకోండి", "logistics_path": "డెలివరీ లాజిస్టిక్స్ మార్గం",
-        "dispatch": "🚀 ఆర్డర్ పంపిణీని ఖరారు చేయండి", "ai_title": "🤖 జెమిని AI операటివ్ ఇంటర్వెన్షన్ ప్లానర్", "run_ai": "✨ AI డిమాండ్ విశ్లేషణను రన్ చేయండి"
+        "pharma_title": "💊 ఫార్మసీ పంపిణీ డెస్క్ & డ్రోన్ లాజిస్టిక్స్", "select_rx": "పంపిణీ చేయడానికి ప్రిస్క్రిప్షన్ IDని ఎంచుకోండి", "logistics_path": "డెలివరీ లాజిస్टीక్స్ మార్గం",
+        "dispatch": "🚀 ఆర్డర్ పంపిణీని ఖరారు చేయండి", "ai_title": "🤖 జెమిని AI ఆపరేటివ్ ఇంటర్వెన్షన్ ప్లానర్", "run_ai": "✨ AI డిమాండ్ విశ్లేషణను రన్ చేయండి",
+        "btn_login": "🔑 లాగిన్ అవ్వండి", "btn_logout": "🚪 సిస్టమ్ నుండి లాగ్ అవుట్ అవ్వండి"
     },
     "हिन्दी (Hindi)": {
         "title": "🌐 भारत हेल्थ एआई: मल्टी-रोल ऑपरेशंस मैट्रिक्स", "subtitle": "ट्रैक 3: स्मार्ट हेल्थ डैशबोर्ड — एंड-टू-एंड वर्कफ़्लो सत्यापन",
@@ -113,13 +115,14 @@ LANG_PACK = {
         "submit_intake": "📥 रोगी के विवरण क्लिनिकल कतार में भेजें", "doc_title": "🩺 चिकित्सक मूल्यांकन पोर्टल", "select_pt": "उपचार के लिए सक्रिय रोगी टोकन चुनें",
         "prescribe": "आवश्यक दवा फॉर्मूलेशन लिखें", "dosage": "दवा की खुराक के निर्देश", "sign_rx": "✍️ डिजिटल नुस्खा (Prescription) प्रमाणित करें",
         "pharma_title": "💊 फार्मेसी वितरण डेस्क और ड्रोन रसद (Logistics)", "select_rx": "वितरण के लिए प्रेस्क्रिप्शन आईडी चुनें", "logistics_path": "वितरण रसद पथ",
-        "dispatch": "🚀 वितरण आदेश अंतिम रूप दें", "ai_title": "🤖 जेमिनी एआई मांग और हस्तक्षेप योजनाकार", "run_ai": "✨ एआई मांग विश्लेषण चलाएं"
+        "dispatch": "🚀 वितरण आदेश अंतिम रूप दें", "ai_title": "🤖 जेमिनी एआई मांग और हस्तक्षेप योजनाकार", "run_ai": "✨ एआई मांग विश्लेषण चलाएं",
+        "btn_login": "🔑 लॉग इन करें", "btn_logout": "🚪 सुरक्षित सत्र लॉगआउट"
     }
 }
-# app.py — BLOCK 2: VISUAL OVERLAYS & CORE TABLES
+# app.py — BLOCK 2: SECURE SESSION ENGINE & CHARTS PLOTS
 st.sidebar.header("🌐 Localization Setup")
 ui_lang = st.sidebar.selectbox("Select Display Language", ["English", "తెలుగు (Telugu)", "हिन्दी (Hindi)"])
-L = LANG_PACK[ui_lang] # Load translated terms array context pointer globally
+L = LANG_PACK[ui_lang]
 
 st.markdown(f"""
     <div style='background-color:#003A70;padding:15px;border-radius:10px;margin-bottom:20px'>
@@ -127,6 +130,13 @@ st.markdown(f"""
         <p style='color:#FFC107;margin:5px 0 0 0;'>{L['subtitle']}</p>
     </div>
 """, unsafe_allow_html=True)
+
+# 🔄 STATE MEMORY CACHE WRAPPERS
+if "auth_logged_in" not in st.session_state:
+    st.session_state["auth_logged_in"] = False
+    st.session_state["cached_role"] = None
+    st.session_state["cached_district"] = "All Districts"
+    st.session_state["cached_facility"] = "ALL"
 
 def local_stock_chart(df, title_txt):
     fig, ax = plt.subplots(figsize=(7, 3.2))
@@ -143,7 +153,7 @@ def local_risk_chart(scope_district, y_label):
     conn = sqlite3.connect("data/smart_health.db")
     df = pd.read_sql_query("SELECT h.node_name, o.active_epidemic_risk_score, h.district_name FROM node_operations o JOIN administrative_hierarchy h ON o.node_id = h.node_id", conn)
     conn.close()
-    if scope_district != "All Districts":
+    if scope_district != "All Districts" and scope_district is not None:
         df = df[df['district_name'] == scope_district]
     fig, ax = plt.subplots(figsize=(7, 3.2))
     ax.bar(df['node_name'], df['active_epidemic_risk_score'], color='#007BFF', alpha=0.85, width=0.3)
@@ -155,54 +165,78 @@ def local_risk_chart(scope_district, y_label):
     plt.tight_layout()
     return fig
 
-# 🔐 SIDEBAR AUTHENTICATION ENGINE
-st.sidebar.header("🔐 Role Clearance Desk")
-selected_role = st.sidebar.selectbox(L['role_label'], ["Choose Role", "State Administrator", "District Officer", "ASHA Worker", "Medical Doctor", "Pharmacist"])
-password_input = st.sidebar.text_input(L['pass_label'], type="password", placeholder="••••••••••••")
+# 🔐 COMPREHENSIVE INTERACTIVE AUTHENTICATION HANDSHAKE WIDGET
+if not st.session_state["auth_logged_in"]:
+    st.sidebar.header("🔐 Role Clearance Desk")
+    selected_role = st.sidebar.selectbox(L['role_label'], ["Choose Role", "State Administrator", "District Officer", "ASHA Worker", "Medical Doctor", "Pharmacist"])
+    password_input = st.sidebar.text_input(L['pass_label'], type="password", placeholder="••••••••••••")
+    
+    if st.sidebar.button(L['btn_login']):
+        if selected_role == "State Administrator" and password_input == "AmaravatiHealth2026!":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "State Administrator"
+            st.session_state["cached_district"] = "All Districts"
+            st.rerun()
+        elif selected_role == "District Officer" and password_input == "VizagDSU99!":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "District Officer"
+            st.session_state["cached_district"] = "Visakhapatnam"
+            st.rerun()
+        elif selected_role == "ASHA Worker" and password_input == "VillageASHA456":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "ASHA Worker"
+            st.session_state["cached_facility"] = "IN-AP-VSP-PND"
+            st.rerun()
+        elif selected_role == "Medical Doctor" and password_input == "MedicalDoc123":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "Medical Doctor"
+            st.session_state["cached_facility"] = "IN-AP-VSP-PND"
+            st.rerun()
+        elif selected_role == "Pharmacist" and password_input == "PharmaStore456":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "Pharmacist"
+            st.session_state["cached_facility"] = "IN-AP-VSP-PND"
+            st.rerun()
+        else:
+            st.sidebar.error("❌ Authentication Mismatch.")
+else:
+    # 🚪 LIVE SECURE SESSION LOGOUT TRIGGER MECHANISM
+    st.sidebar.header("👤 Active Session Identity")
+    st.sidebar.info(f"Role: {st.session_state['cached_role']}")
+    
+    if st.sidebar.button(L['btn_logout'], type="primary"):
+        # Explicit cache memory destruction parameters
+        st.session_state["auth_logged_in"] = False
+        st.session_state["cached_role"] = None
+        st.session_state["cached_district"] = "All Districts"
+        st.session_state["cached_facility"] = "ALL"
+        st.success("Session dropped. Re-locking boundaries.")
+        st.rerun()
 
-authenticated, assigned_district, assigned_facility = False, "All Districts", "ALL"
-
-if selected_role == "State Administrator" and password_input == "AmaravatiHealth2026!":
-    authenticated = True
-    assigned_district = st.sidebar.selectbox("Filter Global Jurisdiction", ["All Districts", "Visakhapatnam", "Vizianagaram", "Srikakulam"])
-elif selected_role == "District Officer" and password_input == "VizagDSU99!":
-    authenticated = True
-    assigned_district = st.sidebar.selectbox("Select Monitored Area", ["Visakhapatnam", "Vizianagaram", "Srikakulam"])
-elif selected_role == "ASHA Worker" and password_input == "VillageASHA456":
-    authenticated = True
-    user_node = st.sidebar.selectbox("Select Your Operational Village Base", ["Pendurthi Hub", "Gajapathinagaram PHC", "Srikakulam Rural"])
-    assigned_facility = "IN-AP-VSP-PND" if "Pendurthi" in user_node else "IN-AP-VZM-GJN" if "Gajapathinagaram" in user_node else "IN-AP-SKL-RUR"
-elif selected_role == "Medical Doctor" and password_input == "MedicalDoc123":
-    authenticated = True
-    user_doc = st.sidebar.selectbox("Select Your Registry Name", ["Dr. S. Srinivasa Rao", "Dr. Ch. Koteswara Rao", "Dr. K. Venkataswamy"])
-    assigned_facility = "IN-AP-VSP-PND" if "Srinivasa" in user_doc else "IN-AP-VZM-GJN" if "Koteswara" in user_doc else "IN-AP-SKL-RUR"
-elif selected_role == "Pharmacist" and password_input == "PharmaStore456":
-    authenticated = True
-    user_phr = st.sidebar.selectbox("Select Pharmacy Unit", ["Sri K. Venkatesh (Pendurthi)", "Sri L. Narayana (Gajapathinagaram)", "Sri P. Satyam (Srikakulam)"])
-    assigned_facility = "IN-AP-VSP-PND" if "Pendurthi" in user_phr else "IN-AP-VZM-GJN" if "Gajapathinagaram" in user_phr else "IN-AP-SKL-RUR"
-elif password_input != "":
-    st.sidebar.error("❌ Invalid credentials password for the selected role.")
-
-if authenticated:
+# RUN COMPONENT VIEWS BASED ON RESOLVED LOGGED CONTEXT STATES
+if st.session_state["auth_logged_in"]:
     conn = sqlite3.connect("data/smart_health.db")
     inventory_df = pd.read_sql_query("SELECT i.*, h.node_name, h.district_name, h.latitude, h.longitude FROM inventory i JOIN administrative_hierarchy h ON i.node_id = h.node_id", conn)
     conn.close()
 
-    if assigned_district != "All Districts":
-        inventory_df = inventory_df[inventory_df['district_name'] == assigned_district]
+    if st.session_state["cached_role"] == "State Administrator":
+        st.session_state["cached_district"] = st.sidebar.selectbox("Global Navigation Overlay", ["All Districts", "Visakhapatnam", "Vizianagaram", "Srikakulam"])
 
-    if selected_role in ["State Administrator", "District Officer"]:
-        st.subheader(f"📊 Surveillance Operations Panel: Scope [{assigned_district}]")
+    if st.session_state["cached_district"] != "All Districts":
+        inventory_df = inventory_df[inventory_df['district_name'] == st.session_state["cached_district"]]
+
+    if st.session_state["cached_role"] in ["State Administrator", "District Officer"]:
+        st.subheader(f"📊 Surveillance Matrix Operations Pool: [{st.session_state['cached_district']}]")
         col_g1, col_g2 = st.columns(2)
         with col_g1: st.pyplot(local_stock_chart(inventory_df, L['stock_title']))
-        with col_g2: st.pyplot(local_risk_chart(assigned_district, L['risk_title']))
-# app.py — BLOCK 3: LOCALIZED HEALTH WORKFLOWS
+        with col_g2: st.pyplot(local_risk_chart(st.session_state["cached_district"], L['risk_title']))
+# app.py — BLOCK 3: CLINICAL LOOPS WORKSPACES
     st.markdown("---")
     
     # -------------------------------------------------------------
     # ROLE WORKFLOW VIEW 1: ASHA PATIENT TRIAGE COUNTER
     # -------------------------------------------------------------
-    if selected_role == "ASHA Worker":
+    if st.session_state["cached_role"] == "ASHA Worker":
         st.subheader(L['asha_title'])
         with st.form("asha_entry_form"):
             pt_phone = st.text_input(L['pt_phone'], "9848022338")
@@ -216,7 +250,7 @@ if authenticated:
                 cursor = conn.cursor()
                 token = f"AP-{cursor.execute('SELECT COUNT(*) FROM patient_triage_queue').fetchone() + 1001}"
                 vitals_summary = f"{symptoms} | BP: {sys_bp}/{dia_bp} mmHg | Mode: {consult_mode}"
-                cursor.execute("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, 'WAITING')", (token, assigned_facility, "sha256_hash", pt_phone, vitals_summary))
+                cursor.execute("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, 'WAITING')", (token, st.session_state["cached_facility"], "sha256_hash", pt_phone, vitals_summary))
                 conn.commit()
                 conn.close()
                 st.success(f"🎉 Saved! Token Assigned: **{token}**")
@@ -224,10 +258,10 @@ if authenticated:
     # -------------------------------------------------------------
     # ROLE WORKFLOW VIEW 2: DOCTOR EVALUATION POOL
     # -------------------------------------------------------------
-    elif selected_role == "Medical Doctor":
+    elif st.session_state["cached_role"] == "Medical Doctor":
         st.subheader(L['doc_title'])
         conn = sqlite3.connect("data/smart_health.db")
-        waiting_df = pd.read_sql_query("SELECT * FROM patient_triage_queue WHERE node_id = ? AND status = 'WAITING'", conn, params=(assigned_facility,))
+        waiting_df = pd.read_sql_query("SELECT * FROM patient_triage_queue WHERE node_id = ? AND status = 'WAITING'", conn, params=(st.session_state["cached_facility"],))
         conn.close()
         
         if not waiting_df.empty:
@@ -240,10 +274,10 @@ if authenticated:
                 if st.form_submit_button(L['sign_rx']):
                     conn = sqlite3.connect("data/smart_health.db")
                     cursor = conn.cursor()
-                    vitals_txt = cursor.execute("SELECT symptoms_logged FROM patient_triage_queue WHERE token_id = ?", (target_token,)).fetchone()[0]
+                    vitals_txt = cursor.execute("SELECT symptoms_logged FROM patient_triage_queue WHERE token_id = ?", (target_token,)).fetchone()
                     mode = "e-Sanjeevani Video Call Telehealth" if "Video" in vitals_txt else "Physical Local OPD Desk"
                     cursor.execute("INSERT INTO patient_prescriptions (token_id, node_id, doctor_name, medication_name, dosage_instructions, consult_mode, status) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')",
-                                   (target_token, assigned_facility, "Attending Doctor", rx_med, rx_dose, mode))
+                                   (target_token, st.session_state["cached_facility"], "Attending Doctor", rx_med, rx_dose, mode))
                     cursor.execute("UPDATE patient_triage_queue SET status = 'COMPLETED' WHERE token_id = ?", (target_token,))
                     conn.commit()
                     conn.close()
@@ -255,10 +289,10 @@ if authenticated:
     # -------------------------------------------------------------
     # ROLE WORKFLOW VIEW 3: PHARMACIST DELIVERY DESK
     # -------------------------------------------------------------
-    elif selected_role == "Pharmacist":
+    elif st.session_state["cached_role"] == "Pharmacist":
         st.subheader(L['pharma_title'])
         conn = sqlite3.connect("data/smart_health.db")
-        orders_df = pd.read_sql_query("SELECT * FROM patient_prescriptions WHERE node_id = ? AND status = 'PENDING'", conn, params=(assigned_facility,))
+        orders_df = pd.read_sql_query("SELECT * FROM patient_prescriptions WHERE node_id = ? AND status = 'PENDING'", conn, params=(st.session_state["cached_facility"],))
         conn.close()
         
         if not orders_df.empty:
@@ -270,19 +304,19 @@ if authenticated:
                 if st.form_submit_button(L['dispatch']):
                     conn = sqlite3.connect("data/smart_health.db")
                     cursor = conn.cursor()
-                    rx_item = cursor.execute("SELECT medication_name FROM patient_prescriptions WHERE prescription_id = ?", (target_rx,)).fetchone()[0]
-                    cursor.execute("UPDATE inventory SET current_stock = current_stock - 1 WHERE node_id = ? AND item_name = ?", (assigned_facility, rx_item))
+                    rx_item = cursor.execute("SELECT medication_name FROM patient_prescriptions WHERE prescription_id = ?", (target_rx,)).fetchone()
+                    cursor.execute("UPDATE inventory SET current_stock = current_stock - 1 WHERE node_id = ? AND item_name = ?", (st.session_state["cached_facility"], rx_item))
                     cursor.execute("UPDATE patient_prescriptions SET status = 'FULFILLED' WHERE prescription_id = ?", (target_rx,))
                     conn.commit()
                     conn.close()
                     st.success(f"✅ Order #{target_rx} Dispatched!")
                     if "Drone" in delivery_method:
-                        st.warning(f"✈️ Launching drone resupply via coordinates.")
+                        st.warning(f"✈️ Launching drone resupply payload.")
                     st.rerun()
         else:
             st.success("🟢 No pending orders.")
 
-    elif selected_role in ["State Administrator", "District Officer"]:
+    elif st.session_state["cached_role"] in ["State Administrator", "District Officer"]:
         conn = sqlite3.connect("data/smart_health.db")
         global_triage = pd.read_sql_query("SELECT t.token_id, h.node_name, t.symptoms_logged, t.status FROM patient_triage_queue t JOIN administrative_hierarchy h ON t.node_id = h.node_id", conn)
         conn.close()
@@ -290,7 +324,7 @@ if authenticated:
         st.dataframe(global_triage, use_container_width=True, hide_index=True)
 
     # 🤖 UNIFIED LOCALIZED GEMINI FORECASTER
-    if selected_role in ["State Administrator", "District Officer"]:
+    if st.session_state["cached_role"] in ["State Administrator", "District Officer"]:
         st.markdown("---")
         st.subheader(L['ai_title'])
         typed_api_key = st.text_input("🌐 Paste Gemini API Key to unlock AI Module", type="password", placeholder="AIza...")
@@ -308,5 +342,7 @@ if authenticated:
                         st.warning(response.text)
                     except Exception as e:
                         st.error(f"Gemini API Execution Error: {str(e)}")
+            else:
+                st.error("Please insert a valid developer API Key to unlock this module.")
 else:
-    st.info(LANG_PACK[ui_lang]['lock_msg'])
+    st.info(L['lock_msg'])
