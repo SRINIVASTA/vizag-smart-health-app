@@ -1,13 +1,23 @@
+# src/predictive_engine.py
 import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
+import streamlit as st
+from google import genai
+from google.genai import types
+
+# ==========================================
+# 🛡️ SECTION 1: DATABASE & DATA ANALYTICS
+# ==========================================
 
 def calculate_days_to_depletion(stock, consumption):
     if consumption <= 0: return float('inf')
     return round(stock / consumption, 1)
 
 def run_cross_tier_supply_balancing():
-    conn = sqlite3.connect("smart_health.db")
+    """Fetches inventory telemetry from local SQLite database and identifies supply matching paths."""
+    # Pointing to the repository's native file structure
+    conn = sqlite3.connect("data/smart_health.db")
     df = pd.read_sql_query("""
         SELECT i.*, h.node_name, h.latitude, h.longitude, h.district_name
         FROM inventory i 
@@ -31,7 +41,12 @@ def run_cross_tier_supply_balancing():
             })
     return df, transfers
 
+# ==========================================
+# 📊 SECTION 2: MATPLOTLIB CHART GENERATORS
+# ==========================================
+
 def generate_stock_prediction_chart(df):
+    """Generates the horizontal stock exhaustion bar chart matrix."""
     fig, ax = plt.subplots(figsize=(7, 3.5))
     df['days_remaining'] = df.apply(lambda r: calculate_days_to_depletion(r['current_stock'], r['daily_avg_consumption']), axis=1)
     df_sorted = df.sort_values(by='days_remaining')
@@ -52,8 +67,13 @@ def generate_stock_prediction_chart(df):
     return fig
 
 def generate_epidemic_risk_chart():
-    conn = sqlite3.connect("smart_health.db")
-    df = pd.read_sql_query("SELECT h.node_name, o.active_epidemic_risk_score FROM node_operations o JOIN administrative_hierarchy h ON o.node_id = h.node_id", conn)
+    """Generates the vertical syndromic anomaly risk chart."""
+    conn = sqlite3.connect("data/smart_health.db")
+    df = pd.read_sql_query("""
+        SELECT h.node_name, o.active_epidemic_risk_score 
+        FROM node_operations o 
+        JOIN administrative_hierarchy h ON o.node_id = h.node_id
+    """, conn)
     conn.close()
     
     fig, ax = plt.subplots(figsize=(7, 3.5))
@@ -72,3 +92,62 @@ def generate_epidemic_risk_chart():
         ax.text(bar.get_x() + bar.get_width()/2., height + 0.02, f"{round(height*100)}%", ha='center', va='bottom', fontsize=8, fontweight='bold')
     plt.tight_layout()
     return fig
+
+# ==========================================
+# 🤖 SECTION 3: GEMINI AI INTEGRATION CONTEXT
+# ==========================================
+
+def get_gemini_client():
+    """Initializes the secure GenAI Client utilizing your stored Streamlit secret."""
+    try:
+        api_key = st.secrets["GEMINI_API_KEY"]
+        return genai.Client(api_key=api_key)
+    except KeyError:
+        st.error("Missing API Key! Please verify GEMINI_API_KEY is configured in .streamlit/secrets.toml")
+        return None
+
+def generate_district_health_forecast(inventory_df, transfer_recommendations):
+    """
+    Feeds physical database outputs and chart matrices into Gemini 2.5 Flash 
+    to automatically generate a contextual Track 3 intervention report.
+    """
+    client = get_gemini_client()
+    if not client:
+        return "AI Module Offline: Missing Authentication Configuration."
+
+    system_instruction = (
+        "You are an expert Public Health Operations Assistant specializing in AP District Health infrastructure. "
+        "Analyze the provided clinic database inventory state and algorithmic transfer options to produce an "
+        "executive risk summary and early warning bulletin for the District Collector and Chief Medical Officer."
+    )
+    
+    # Transform raw data variables into a clean string layout for prompt processing
+    inventory_summary = inventory_df[['node_name', 'item_name', 'current_stock', 'min_required_threshold', 'daily_avg_consumption']].to_string()
+    
+    prompt = f"""
+    Analyze the current operational data metrics from our public health network:
+    
+    === RAW FACILITY INVENTORY SYSTEM LOGS ===
+    {inventory_summary}
+    
+    === PROPOSED ALGORITHMIC STOCK REDISTRIBUTION BLOCKS ===
+    {transfer_recommendations}
+    
+    Tasks to fulfill for Track 3 evaluation panels:
+    1. Translate the raw inventory metrics into an active early stock-out warning.
+    2. Critique the proposed redistribution paths. Validate if moving the resources matches local demand.
+    3. Generate explicit action instructions for under-performing centers or critical logistics shortages.
+    """
+
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.2
+            )
+        )
+        return response.text
+    except Exception as e:
+        return f"Error executing demand forecasting: {str(e)}"
