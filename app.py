@@ -1,9 +1,10 @@
-# app.py — BLOCK 1: COMPONENT INITIALIZATION & MULTI-LANGUAGE DIRECTORY
+# app.py — BLOCK 1: CORE INITIALIZATION & TRANSLATION MATRICES
 import streamlit as st
 import pandas as pd
 import sqlite3
 import os
 import matplotlib.pyplot as plt
+import src.predictive_engine as engine
 
 # 🛠️ EMBEDDED AUTOMATIC DATABASE CREATION ENGINE
 def build_native_database_instance():
@@ -33,6 +34,8 @@ def build_native_database_instance():
 
     doctors = [
         ('DOC-VSP-001', 'IN-AP-VSP-PND', 'Dr. S. Srinivasa Rao', 'General Medicine', 1),
+        ('DOC-VSP-002', 'IN-AP-VSP-PND', 'Dr. K. Anuradha', 'Pediatrics', 1),
+        ('DOC-VSP-003', 'IN-AP-VSP-BHM', 'Dr. A. Lakshmi Prasanna', 'General Medicine', 1), 
         ('DOC-VZM-001', 'IN-AP-VZM-GJN', 'Dr. Ch. Koteswara Rao', 'General Medicine', 1),
         ('DOC-SKL-001', 'IN-AP-SKL-RUR', 'Dr. K. Venkataswamy', 'General Medicine', 1)
     ]
@@ -81,8 +84,8 @@ st.set_page_config(layout="wide", page_title="Bharat Health AI Command")
 LANG_PACK = {
     "English": {
         "title": "🌐 Bharat Health AI: Multi-Role Operations Matrix", "subtitle": "Track 3: Smart Health Dashboard — End-to-End Workflow Verification",
-        "lock_msg": "🔒 Please select a valid role and enter its clearance password in the left sidebar to unlock records.",
-        "role_label": "Select Your System Role", "pass_label": "Enter Clearance Password", "lang_label": "🌐 Change UI Language",
+        "lock_msg": "🔒 Please select a valid role and enter its unique password in the left sidebar to unlock records.",
+        "role_label": "Select Your System Role", "pass_label": "Enter Unique Password", "lang_label": "🌐 Change UI Language",
         "stock_title": "AI Supply Depletion & Stock Grid Monitor", "risk_title": "Outbreak Risk Multiplier",
         "asha_title": "Frontline Patient Intake Registration Matrix", "pt_phone": "Patient Contact Mobile Number", "symptoms": "Logged Symptoms Description",
         "sys_bp": "Vitals: Systolic Blood Pressure (mmHg)", "dia_bp": "Vitals: Diastolic Blood Pressure (mmHg)", "consult_mode": "Requested Consultation Mode",
@@ -93,22 +96,22 @@ LANG_PACK = {
         "btn_login": "🔑 Authenticate & Login", "btn_logout": "🚪 Secure Session Logout"
     },
     "తెలుగు (Telugu)": {
-        "title": "🌐 భరత్ హెల్త్ AI: మల్టీ-రోల్ ఆపరేషన్స్ మేట్రిక్స్", "subtitle": "ట్రాక్ 3: స్మార్ట్ హెల్త్ డ్యాష్‌బోర్డ్ — ఎండ్-టు-ఎండ్ వర్క్‌ఫ్లో వెరిఫికేషన్",
-        "lock_msg": "🔒 రికార్డులను అన్‌లాక్ చేయడానికి దయచేసి ఎడమ సైడ్‌బార్‌లో చెల్లుబాటు అయ్యే పాత్రను ఎంచుకుని, దాని పాస్‌వర్డ్‌ను నమోదు చేయండి.",
-        "role_label": "మీ సిస్టమ్ పాత్రను ఎంచుకోండి", "pass_label": "క్లియరెన్స్ పాస్‌వర్డ్ నమోదు చేయండి", "lang_label": "🌐 భాషను మార్चండి",
+        "title": "🌐 భరత్ హెల్త్ AI: మల్టీ-రోల్ ఆపరేషన్ส์ మేట్రిక్స్", "subtitle": "ట్రాక్ 3: స్మార్ట్ హెల్త్ డ్యాష్‌బోర్డ్ — ఎండ్-టు-ఎండ్ వర్క్‌ఫ్లో వెరిఫికేషన్",
+        "lock_msg": "🔒 రికార్డులను అన్‌లాక్ చేయడానికి దయచేసి ఎడమ సైడ్‌బార్‌లో చెల్లుబాటు అయ్యే పాత్రను ఎంచుకుని, దాని ప్రత్యేక పాస్‌వర్డ్‌ను నమోదు చేయండి.",
+        "role_label": "మీ సిస్టమ్ పాత్రను ఎంచుకోండి", "pass_label": "ప్రత్యేక పాస్‌వర్డ్ నమోదు చేయండి", "lang_label": "🌐 భాషను మార్చండి",
         "stock_title": "AI సప్లై క్షీణత & స్టాక్ గ్రిడ్ మానిటర్", "risk_title": "వ్యాధి వ్యాప్తి ప్రమాద గుణకం",
-        "asha_title": "ఆశా వర్కర్ రోగి రిజిస్ట్రేషన్ ఫారమ్", "pt_phone": "రోగి సంప్రదింపు మొబైल నంబర్", "symptoms": "రోగి లక్షణాల వివరణ",
+        "asha_title": "ఆశా వర్కర్ రోగి రిजिస్ట్రేషన్ ఫారమ్", "pt_phone": "రోగి సంప్రదింపు మొబైల్ నంబర్", "symptoms": "రోగి లక్షణాల వివरण",
         "sys_bp": "సిస్టోలిక్ రక్తపోటు (Systolic BP)", "dia_bp": "డయాస్టోలిక్ రక్తపోటు (Diastolic BP)", "consult_mode": "అవసరమైన సంప్రదింపు విధానం",
-        "submit_intake": "📥 రోగి వివరాలను క్లినికल క్యూకు పంపండి", "doc_title": "🩺 వైద్యుల మూల్యాంకన పోర్టల్", "select_pt": "చికిత్స చేయడానికి రోగి టోకెన్‌ను ఎంచుకోండి",
+        "submit_intake": "📥 రోగి వివరాలను క్లినికల్ క్యూకు పంపండి", "doc_title": "🩺 వైద్యుల మూల్యాంకన పోర్టల్", "select_pt": "చిकीత్స చేయడానికి రోగి టోకెన్‌ను ఎంచుకోండి",
         "prescribe": "అవసరమైన మందులను సూచించండి", "dosage": "మందుల వాడకం సూచనలు", "sign_rx": "✍️ డిజిటల్ ప్రిస్క్రిప్షన్‌ను ఆమోదించండి",
-        "pharma_title": "💊 ఫార్మసీ పంపిణీ డెస్క్ & డ్రోన్ లాజిస్టిక్స్", "select_rx": "పంపిణీ చేయడానికి ప్రిస్క్రిప్షన్ IDని ఎంచుకోండి", "logistics_path": "డెలివరీ లాజిస్टीక్స్ మార్గం",
-        "dispatch": "🚀 ఆర్డర్ పంపిణీని ఖరారు చేయండి", "ai_title": "🤖 జెమిని AI ఆపరేటివ్ ఇంటర్వెన్షన్ ప్లానర్", "run_ai": "✨ AI డిమాండ్ విశ్లేషణను రన్ చేయండి",
+        "pharma_title": "💊 ఫార్మసీ పంపిణీ డెస్క్ & డ్రోన్ లాజిస్టిక్స్", "select_rx": "పంపిణీ చేయడానికి ప్రిస్క్రిప్షన్ IDని ఎంచుకోండి", "logistics_path": "డెలివరీ లాజిస్టిక్స్ మార్గం",
+        "dispatch": "🚀 ఆర్డర్ పంపిణీని ఖరారు చేయండి", "ai_title": "🤖 జెమిని AI ఆపరేటివ్ ఇంటర్వెन्शन ప్లానర్", "run_ai": "✨ AI డిమాండ్ విశ్लेషణను రన్ చేయండి",
         "btn_login": "🔑 లాగిన్ అవ్వండి", "btn_logout": "🚪 సిస్టమ్ నుండి లాగ్ అవుట్ అవ్వండి"
     },
     "हिन्दी (Hindi)": {
-        "title": "🌐 भारत हेल्थ एआई: मल्टी-रोल ऑपरेशंस मैट्रिक्स", "subtitle": "ट्रैक 3: स्मार्ट हेल्थ डैशबोर्ड — एंड-टू-एंड वर्कफ़्लो सत्यापन",
-        "lock_msg": "🔒 रिकॉर्ड अनलॉक करने के लिए कृपया बाएं साइडबार में एक वैध भूमिका चुनें और उसका पासवर्ड दर्ज करें।",
-        "role_label": "अपनी सिस्टम भूमिका चुनें", "pass_label": "निकासी कूटशब्द (Password) दर्ज करें", "lang_label": "🌐 यूआई भाषा बदलें",
+        "title": "🌐 भारत हेल्थ एआई: मल्टी-रोल ऑपरेशंस मैट्रिक्स", "subtitle": "ट्रैक 3: स्मार्ट हेल्थ डैशबोर्ड — एंड-टु-एंड वर्कफ़्लो सत्यापन",
+        "lock_msg": "🔒 रिकॉर्ड अनलॉक करने के लिए कृपया बाएं साइडबार में एक वैध भूमिका चुनें और उसका अद्वितीय पासवर्ड दर्ज करें।",
+        "role_label": "अपनी सिस्टम भूमिका चुनें", "pass_label": "अद्वितीय कूटशब्द (Password) दर्ज करें", "lang_label": "🌐 यूआई भाषा बदलें",
         "stock_title": "एआई आपूर्ति कमी और स्टॉक ग्रिड मॉनिटर", "risk_title": "प्रकोप जोखिम गुणक",
         "asha_title": "आशा कार्यकर्ता रोगी पंजीकरण फॉर्म", "pt_phone": "रोगी का मोबाइल नंबर", "symptoms": "रोगी के लक्षणों का विवरण",
         "sys_bp": "सिस्टोलिक रक्तचाप (Systolic BP)", "dia_bp": "डायस्टोलिक रक्तचाप (Diastolic BP)", "consult_mode": "परामर्श का अनुरोधित तरीका",
@@ -119,57 +122,165 @@ LANG_PACK = {
         "btn_login": "🔑 लॉग इन करें", "btn_logout": "🚪 सुरक्षित सत्र लॉगआउट"
     }
 }
-# app.py — Block 2 (Updated Security Dictionary Segment)
+# app.py — BLOCK 2: UNIQUE PASSWORDS ACCESS ENGINE & GRAPHICS
+st.sidebar.header("🌐 Localization Setup")
+ui_lang = st.sidebar.selectbox("Select Display Language", ["English", "తెలుగు (Telugu)", "हिन्दी (Hindi)"])
 
-# 🔐 SIDEBAR AUTHENTICATION ENGINE
-st.sidebar.header("🔐 Role Clearance Desk")
-selected_role = st.sidebar.selectbox(L['role_label'], ["Choose Role", "State Administrator", "District Officer", "ASHA Worker", "Medical Doctor", "Pharmacist"])
-password_input = st.sidebar.text_input(L['pass_label'], type="password", placeholder="••••••••••••")
+# 🌟 FIXES THE NameError: Forces L to mount safely into namespace context memory fields
+L = LANG_PACK[ui_lang]
 
-authenticated, assigned_district, assigned_facility = False, "All Districts", "ALL"
+st.markdown(f"""
+    <div style='background-color:#003A70;padding:15px;border-radius:10px;margin-bottom:20px'>
+        <h1 style='color:white;margin:0;font-family:sans-serif;'>{L['title']}</h1>
+        <p style='color:#FFC107;margin:5px 0 0 0;'>{L['subtitle']}</p>
+    </div>
+""", unsafe_allow_html=True)
 
-# Explicit 1-to-1 matching parameters for unique password structures
-if selected_role == "State Administrator" and password_input == "AmaravatiHealth2026!":
-    authenticated = True
-    assigned_district = st.sidebar.selectbox("Filter Global Jurisdiction", ["All Districts", "Visakhapatnam", "Vizianagaram", "Srikakulam"])
+# Initialize Session-States
+if "auth_logged_in" not in st.session_state:
+    st.session_state["auth_logged_in"] = False
+    st.session_state["cached_role"] = None
+    st.session_state["cached_district"] = "All Districts"
+    st.session_state["cached_facility"] = "ALL"
 
-elif selected_role == "District Officer":
-    if password_input == "VizagCMO#2026!":
-        authenticated, assigned_district = True, "Visakhapatnam"
-    elif password_input == "VizmCMO#2026!":
-        authenticated, assigned_district = True, "Vizianagaram"
-    elif password_input == "SklmCMO#2026!":
-        authenticated, assigned_district = True, "Srikakulam"
+def local_stock_chart(df, title_txt):
+    fig, ax = plt.subplots(figsize=(7, 3.2))
+    df_sorted = df.sort_values(by='current_stock')
+    colors = ['#DC3545' if x <= r['min_required_threshold'] else '#28A745' for x, r in zip(df_sorted['current_stock'], df_sorted.to_dict('records'))]
+    bars = ax.barh(df_sorted['node_name'], df_sorted['current_stock'], color=colors, height=0.5)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.set_title(title_txt, fontsize=10, fontweight='bold')
+    plt.tight_layout()
+    return fig
 
-elif selected_role == "ASHA Worker":
-    if password_input == "AshaVizag$Pnd":
-        authenticated, assigned_facility = True, "IN-AP-VSP-PND"
-    elif password_input == "AshaVizm$Gjn":
-        authenticated, assigned_facility = True, "IN-AP-VZM-GJN"
-    elif password_input == "AshaSklm$Rur":
-        authenticated, assigned_facility = True, "IN-AP-SKL-RUR"
+def local_risk_chart(scope_district, y_label):
+    conn = sqlite3.connect("data/smart_health.db")
+    df = pd.read_sql_query("SELECT h.node_name, o.active_epidemic_risk_score, h.district_name FROM node_operations o JOIN administrative_hierarchy h ON o.node_id = h.node_id", conn)
+    conn.close()
+    if scope_district != "All Districts" and scope_district is not None:
+        df = df[df['district_name'] == scope_district]
+    fig, ax = plt.subplots(figsize=(7, 3.2))
+    ax.bar(df['node_name'], df['active_epidemic_risk_score'], color='#007BFF', alpha=0.85, width=0.3)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.set_ylabel(y_label, fontsize=9, fontweight='bold')
+    ax.set_ylim(0, 1.0)
+    plt.xticks(rotation=10, ha='right', fontsize=8)
+    plt.tight_layout()
+    return fig
 
-elif selected_role == "Medical Doctor":
-    if password_input == "SrinivasaDoc#77" or password_input == "AnuradhaPed#45":
-        authenticated, assigned_facility = True, "IN-AP-VSP-PND"
-    elif password_input == "LakshmiBhm#12":
-        authenticated, assigned_facility = True, "IN-AP-VSP-BHM"
-    elif password_input == "KoteswaraVzm#39":
-        authenticated, assigned_facility = True, "IN-AP-VZM-GJN"
-    elif password_input == "VenkatSklm#88":
-        authenticated, assigned_facility = True, "IN-AP-SKL-RUR"
+# 🔐 COMPREHENSIVE UNIQUE PASSWORD AUTHENTICATION ENGINE
+if not st.session_state["auth_logged_in"]:
+    st.sidebar.header("🔐 Role Clearance Desk")
+    selected_role = st.sidebar.selectbox(L['role_label'], ["Choose Role", "State Administrator", "District Officer", "ASHA Worker", "Medical Doctor", "Pharmacist"])
+    password_input = st.sidebar.text_input(L['pass_label'], type="password", placeholder="••••••••••••")
+    
+    if st.sidebar.button(L['btn_login']):
+        clean_pass = password_input.strip()
+        
+        # 1-to-1 Mapping Checks for Unique Passwords
+        if selected_role == "State Administrator" and clean_pass == "AmaravatiHealth2026!":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "State Administrator"
+            st.session_state["cached_district"] = "All Districts"
+            st.rerun()
+        elif selected_role == "District Officer" and clean_pass == "VizagCMO#2026!":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "District Officer"
+            st.session_state["cached_district"] = "Visakhapatnam"
+            st.rerun()
+        elif selected_role == "District Officer" and clean_pass == "VizmCMO#2026!":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "District Officer"
+            st.session_state["cached_district"] = "Vizianagaram"
+            st.rerun()
+        elif selected_role == "District Officer" and clean_pass == "SklmCMO#2026!":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "District Officer"
+            st.session_state["cached_district"] = "Srikakulam"
+            st.rerun()
+        elif selected_role == "ASHA Worker" and clean_pass == "AshaVizag$Pnd":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "ASHA Worker"
+            st.session_state["cached_facility"] = "IN-AP-VSP-PND"
+            st.rerun()
+        elif selected_role == "ASHA Worker" and clean_pass == "AshaVizm$Gjn":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "ASHA Worker"
+            st.session_state["cached_facility"] = "IN-AP-VZM-GJN"
+            st.rerun()
+        elif selected_role == "ASHA Worker" and clean_pass == "AshaSklm$Rur":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "ASHA Worker"
+            st.session_state["cached_facility"] = "IN-AP-SKL-RUR"
+            st.rerun()
+        elif selected_role == "Medical Doctor" and clean_pass in ["SrinivasaDoc#77", "AnuradhaPed#45"]:
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "Medical Doctor"
+            st.session_state["cached_facility"] = "IN-AP-VSP-PND"
+            st.rerun()
+        elif selected_role == "Medical Doctor" and clean_pass == "LakshmiBhm#12":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "Medical Doctor"
+            st.session_state["cached_facility"] = "IN-AP-VSP-BHM"
+            st.rerun()
+        elif selected_role == "Medical Doctor" and clean_pass == "KoteswaraVzm#39":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "Medical Doctor"
+            st.session_state["cached_facility"] = "IN-AP-VZM-GJN"
+            st.rerun()
+        elif selected_role == "Medical Doctor" and clean_pass == "VenkatSklm#88":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "Medical Doctor"
+            st.session_state["cached_facility"] = "IN-AP-SKL-RUR"
+            st.rerun()
+        elif selected_role == "Pharmacist" and clean_pass == "PharmaPnd%99":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "Pharmacist"
+            st.session_state["cached_facility"] = "IN-AP-VSP-PND"
+            st.rerun()
+        elif selected_role == "Pharmacist" and clean_pass == "PharmaGjn%88":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "Pharmacist"
+            st.session_state["cached_facility"] = "IN-AP-VZM-GJN"
+            st.rerun()
+        elif selected_role == "Pharmacist" and clean_pass == "PharmaRur%77":
+            st.session_state["auth_logged_in"] = True
+            st.session_state["cached_role"] = "Pharmacist"
+            st.session_state["cached_facility"] = "IN-AP-SKL-RUR"
+            st.rerun()
+        else:
+            st.sidebar.error("❌ Unique Password Mismatch.")
+else:
+    # 🚪 LOGOUT CONTROLLER
+    st.sidebar.header("👤 Active Session Identity")
+    st.sidebar.info(f"Role: {st.session_state['cached_role']}")
+    if st.sidebar.button(L['btn_logout'], type="primary"):
+        st.session_state["auth_logged_in"] = False
+        st.session_state["cached_role"] = None
+        st.session_state["cached_district"] = "All Districts"
+        st.session_state["cached_facility"] = "ALL"
+        st.rerun()
 
-elif selected_role == "Pharmacist":
-    if password_input == "PharmaPnd%99":
-        authenticated, assigned_facility = True, "IN-AP-VSP-PND"
-    elif password_input == "PharmaGjn%88":
-        authenticated, assigned_facility = True, "IN-AP-VZM-GJN"
-    elif password_input == "PharmaRur%77":
-        authenticated, assigned_facility = True, "IN-AP-SKL-RUR"
+# RENDER CHARTS UNDER CURRENT AUTHENTICATED STATE
+if st.session_state["auth_logged_in"]:
+    conn = sqlite3.connect("data/smart_health.db")
+    inventory_df = pd.read_sql_query("SELECT i.*, h.node_name, h.district_name, h.latitude, h.longitude FROM inventory i JOIN administrative_hierarchy h ON i.node_id = h.node_id", conn)
+    conn.close()
 
-elif password_input != "":
-    st.sidebar.error("❌ Invalid clearance password credentials for the selected role.")
-# app.py — BLOCK 3: CLINICAL LOOPS WORKSPACES
+    if st.session_state["cached_role"] == "State Administrator":
+        st.session_state["cached_district"] = st.sidebar.selectbox("Global Navigation Overlay", ["All Districts", "Visakhapatnam", "Vizianagaram", "Srikakulam"])
+
+    if st.session_state["cached_district"] != "All Districts":
+        inventory_df = inventory_df[inventory_df['district_name'] == st.session_state["cached_district"]]
+
+    if st.session_state["cached_role"] in ["State Administrator", "District Officer"]:
+        st.subheader(f"📊 Surveillance Matrix Panel: [{st.session_state['cached_district']}]")
+        col_g1, col_g2 = st.columns(2)
+        with col_g1: st.pyplot(local_stock_chart(inventory_df, L['stock_title']))
+        with col_g2: st.pyplot(local_risk_chart(st.session_state["cached_district"], L['risk_title']))
+# app.py — BLOCK 3: TRANSLATED WORKFLOW LOGS
     st.markdown("---")
     
     # -------------------------------------------------------------
@@ -272,7 +383,6 @@ elif password_input != "":
             if typed_api_key.strip().startswith("AIza") and len(typed_api_key.strip()) > 10:
                 with st.spinner("Analyzing data with Gemini..."):
                     try:
-                        import src.predictive_engine as engine
                         client = engine.genai.Client(api_key=typed_api_key.strip())
                         summary_txt = inventory_df[['node_name', 'item_name', 'current_stock', 'min_required_threshold', 'daily_avg_consumption']].to_string()
                         prompt = f"Provide a concise 2-sentence summary intervention plan for this data:\n{summary_txt}"
