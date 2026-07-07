@@ -404,3 +404,56 @@ if st.session_state["auth_logged_in"]:
                 st.error("Please insert a valid developer API Key to unlock this module.")
 else:
     st.info(L['lock_msg'])
+# app.py — BLOCK 3 (GATED ADMINISTRATIVE TRIAGE VIEW)
+
+    # ... [Keep your ASHA, Doctor, and Pharmacist workflow views exactly the same] ...
+
+    # -------------------------------------------------------------
+    # 📋 UPDATED: LOCATION-GATED ADMINISTRATIVE SURVEILLANCE LOGS
+    # -------------------------------------------------------------
+    elif st.session_state["cached_role"] in ["State Administrator", "District Officer"]:
+        conn = sqlite3.connect("data/smart_health.db")
+        
+        # Pull records alongside their respective district indicators
+        global_triage = pd.read_sql_query("""
+            SELECT t.token_id, h.node_name, t.symptoms_logged, t.status, h.district_name 
+            FROM patient_triage_queue t 
+            JOIN administrative_hierarchy h ON t.node_id = h.node_id
+        """, conn)
+        conn.close()
+        
+        # 🎯 STRICT LOCATION ISOLATION FILTER
+        # If logged in as a District Officer, filter out all other districts entirely
+        if st.session_state["cached_district"] != "All Districts":
+            global_triage = global_triage[global_triage['district_name'] == st.session_state["cached_district"]]
+        
+        st.subheader(f"📋 Administrative Triage Ledger: [{st.session_state['cached_district']}] Scope")
+        
+        if not global_triage.empty:
+            # Hide the internal tracking column before displaying data to the judges
+            st.dataframe(global_triage[['token_id', 'node_name', 'symptoms_logged', 'status']], use_container_width=True, hide_index=True)
+        else:
+            st.info(f"🟢 Clearance Status: No active patient triage records found inside {st.session_state['cached_district']}.")
+
+    # -------------------------------------------------------------
+    # 🤖 UNIFIED LOCALIZED GEMINI FORECASTER
+    # -------------------------------------------------------------
+    if st.session_state["cached_role"] in ["State Administrator", "District Officer"]:
+        st.markdown("---")
+        st.subheader(L['ai_title'])
+        typed_api_key = st.text_input("🌐 Paste Gemini API Key to unlock AI Module", type="password", placeholder="AIza...")
+        
+        if st.button(L['run_ai']):
+            if typed_api_key.strip().startswith("AIza") and len(typed_api_key.strip()) > 10:
+                with st.spinner("Analyzing data with Gemini..."):
+                    try:
+                        client = engine.genai.Client(api_key=typed_api_key.strip())
+                        summary_txt = inventory_df[['node_name', 'item_name', 'current_stock', 'min_required_threshold', 'daily_avg_consumption']].to_string()
+                        prompt = f"Provide a concise 2-sentence summary intervention plan for this data:\n{summary_txt}"
+                        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                        st.subheader("📋 Executive Strategic Health Summary")
+                        st.warning(response.text)
+                    except Exception as e:
+                        st.error(f"Gemini API Execution Error: {str(e)}")
+            else:
+                st.error("Please insert a valid developer API Key to unlock this module.")
