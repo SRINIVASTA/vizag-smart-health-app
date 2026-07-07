@@ -4,3 +4,4 @@ numpy
 matplotlib
 sqlite3
 google-genai
+pydantic
