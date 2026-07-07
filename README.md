@@ -169,3 +169,14 @@ Follow these exact operational walkthroughs to demonstrate your end-to-end archi
 ### Walkthrough C: Administrative Jurisdiction Separation
 1. Log in under **vzm_district_officer** using password: `VizagDSU99!`. Access the administrative view panels to observe how the **Matplotlib asset charts** and drone logistics telemetry logs isolate data strictly to the **Vizianagaram** district lines.
 2. Log out and log in under **ap_state_admin** (password: `AmaravatiHealth2026!`). The layout expands instantly into unrestricted mode, compiling data from **Visakhapatnam, Vizianagaram, and Srikakulam** concurrently onto unified District Infection and Stock Exhaustion timelines.
+
+## ✒️ Author and Credits
+
+* **Lead Architect & Developer:** [Srinivasta](https://github.com/SRINIVASTA) & My Team Mate:T.Pujitha Sri, BTECH (ECE), 2ND YEAR.
+
+### Connect with Me
+- [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/srinivas-t-a-557637119/)  
+- [![Kaggle](https://img.shields.io/badge/Kaggle-20BEFF?style=for-the-badge&logo=kaggle&logoColor=white)](https://www.kaggle.com/srinivasta)  
+- [![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:tasrinivass@gmail.com)  
+- [![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/srinivasta)
+
