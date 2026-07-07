@@ -435,6 +435,7 @@ if st.session_state["auth_logged_in"]:
         
         # 🎯 GEOGRAPHICAL BOUNDARY FILTRATION (Blocks cross-district visibility leaks)
         if st.session_state["cached_district"] != "All Districts":
+            inventory_df = inventory_df[inventory_df['district_name'] == st.session_state["cached_district"]]
             global_triage = global_triage[global_triage['district_name'] == st.session_state["cached_district"]]
             
         st.subheader(f"📋 Administrative Triage Ledger: [{st.session_state['cached_district']}] Scope")
