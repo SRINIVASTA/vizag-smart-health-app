@@ -449,7 +449,7 @@ if st.session_state["auth_logged_in"]:
     if st.session_state["cached_role"] in ["State Administrator", "District Officer"]:
         st.markdown("---")
         st.subheader(L['ai_title'])
-        typed_api_key = st.text_input("🌐 Paste Gemini API Key to unlock AI Module", type="password", placeholder="AIza...")
+        typed_api_key = st.text_input("🌐 Paste Gemini API Key to unlock AI Module", type="password", placeholder="")
         
         if st.button(L['run_ai']):
             if typed_api_key.strip().startswith("AIza") and len(typed_api_key.strip()) > 10:
