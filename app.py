@@ -419,7 +419,7 @@ if st.session_state["auth_logged_in"]:
                     st.rerun()
         else:
             st.success("🟢 No pending orders require processing at your pharmacy unit.")
-# app.py — BLOCK 3: PART B (GATED SURVEILLANCE & AI DEMAND LOGS)
+# app.py — BLOCK 3: PART B (GATED SURVEILLANCE & OPEN KEY AI DEMAND LOGS)
 
     # -------------------------------------------------------------
     # 📋 STRICT LOCATION-GATED ADMINISTRATIVE SURVEILLANCE LEDGER
@@ -449,21 +449,27 @@ if st.session_state["auth_logged_in"]:
     if st.session_state["cached_role"] in ["State Administrator", "District Officer"]:
         st.markdown("---")
         st.subheader(L['ai_title'])
-        typed_api_key = st.text_input("🌐 Paste Gemini API Key to unlock AI Module", type="password", placeholder="")
+        
+        # This password field masks your input securely regardless of its character format
+        typed_api_key = st.text_input("🌐 Paste Gemini API Key to unlock AI Module", type="password", placeholder="Enter your key string...")
         
         if st.button(L['run_ai']):
-            if typed_api_key.strip().startswith("AIza") and len(typed_api_key.strip()) > 10:
+            clean_api_key = typed_api_key.strip()
+            
+            # 🌟 FIXED: Accepting any key format layout (Bypasses the legacy 'AIza' requirement string check)
+            if len(clean_api_key) > 5:
                 with st.spinner("Analyzing data streams with Gemini..."):
                     try:
-                        client = engine.genai.Client(api_key=typed_api_key.strip())
+                        client = engine.genai.Client(api_key=clean_api_key)
                         summary_txt = inventory_df[['node_name', 'item_name', 'current_stock', 'min_required_threshold', 'daily_avg_consumption']].to_string()
                         prompt = f"Provide a concise 2-sentence summary intervention plan for this data:\n{summary_txt}"
+                        
                         response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
                         st.subheader("📋 Executive Strategic Health Summary")
                         st.warning(response.text)
                     except Exception as e:
                         st.error(f"Gemini API Execution Error: {str(e)}")
             else:
-                st.error("Please insert a valid developer API Key starting with 'AIza' to unlock this module.")
+                st.error("❌ Key Error: Please paste your active developer Gemini API key into the field box above.")
 else:
     st.info(LANG_PACK[ui_lang]['lock_msg'])
