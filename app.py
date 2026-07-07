@@ -357,7 +357,7 @@ if st.session_state["auth_logged_in"]:
                     cursor.execute("INSERT INTO patient_prescriptions (token_id, node_id, doctor_name, medication_name, dosage_instructions, consult_mode, status) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')",
                                    (target_token, st.session_state["cached_facility"], "Attending Doctor", rx_med, rx_dose, mode))
                     cursor.execute("UPDATE patient_triage_queue SET status = 'COMPLETED' WHERE token_id = ?", (target_token,))
-                    conn.commit() 
+                    conn.commit()
                     conn.close()
                     st.success("🏥 Prescription Transmitted to Pharmacy Desk!")
                     st.rerun()
@@ -365,12 +365,17 @@ if st.session_state["auth_logged_in"]:
             st.success("🟢 No patients waiting in your facility consultation queue.")
 
     # -------------------------------------------------------------
-    # ROLE WORKFLOW VIEW 3: PHARMACIST DELIVERY DESK
+    # ROLE WORKFLOW VIEW 3: PHARMACIST DELIVERY DESK WITH GPS MANIFEST
     # -------------------------------------------------------------
     elif st.session_state["cached_role"] == "Pharmacist":
         st.subheader(L['pharma_title'])
         conn = sqlite3.connect("data/smart_health.db")
-        orders_df = pd.read_sql_query("SELECT * FROM patient_prescriptions WHERE node_id = ? AND status = 'PENDING'", conn, params=(st.session_state["cached_facility"],))
+        orders_df = pd.read_sql_query("""
+            SELECT p.*, h.node_name, h.latitude, h.longitude 
+            FROM patient_prescriptions p 
+            JOIN administrative_hierarchy h ON p.node_id = h.node_id 
+            WHERE p.node_id = ? AND p.status = 'PENDING'
+        """, conn, params=(st.session_state["cached_facility"],))
         conn.close()
         
         if not orders_df.empty:
@@ -385,12 +390,26 @@ if st.session_state["auth_logged_in"]:
                     rx_item = cursor.execute("SELECT medication_name FROM patient_prescriptions WHERE prescription_id = ?", (target_rx,)).fetchone()[0]
                     cursor.execute("UPDATE inventory SET current_stock = current_stock - 1 WHERE node_id = ? AND item_name = ?", (st.session_state["cached_facility"], rx_item))
                     cursor.execute("UPDATE patient_prescriptions SET status = 'FULFILLED' WHERE prescription_id = ?", (target_rx,))
-                    conn.commit() 
+                    conn.commit()
                     conn.close()
                     st.success(f"✅ Order #{target_rx} Dispatched!")
-                    if "Drone" in delivery_method: st.warning(f"✈️ Launching drone resupply payload.")
+                    
+                    if "Drone" in delivery_method:
+                        target_row = orders_df[orders_df['prescription_id'] == target_rx].iloc[0]
+                        st.warning(f"✈️ Launching drone resupply payload.")
+                        st.markdown(f"""
+                            <div style='background-color:#155724; padding:15px; border-radius:8px; border:2px solid #28a745; margin-top:15px;'>
+                                <h5 style='color:#d4edda; margin:0;'>✈️ BVLOS Autonomous Payload Locked & Dispatched</h5>
+                                <p style='color:#fff; font-size:13px; margin:8px 0 0 0;'>
+                                    <b>Target Facility Hub:</b> {target_row['node_name']}<br>
+                                    <b>Destination GPS Coordinates:</b> Lat {target_row['latitude']}°, Lon {target_row['longitude']}°<br>
+                                    <b>Aero-Logistics Status:</b> Flying Drone route payload generation engine active via src/drone_logistics.py.
+                                </p>
+                            </div>
+                        """, unsafe_allow_html=True)
                     st.rerun()
-        else: st.success("🟢 No pending orders require processing at your pharmacy unit.")
+        else:
+            st.success("🟢 No pending orders require processing at your pharmacy unit.")
 # app.py — BLOCK 3: PART B (GATED SURVEILLANCE & AI DEMAND LOGS)
 
     # -------------------------------------------------------------
@@ -405,7 +424,7 @@ if st.session_state["auth_logged_in"]:
         """, conn)
         conn.close()
         
-        # 🎯 GEOGRAPHICAL BOUNDARY FILTRATION (Blocks data leakage across districts)
+        # 🎯 GEOGRAPHICAL BOUNDARY FILTRATION (Blocks cross-district visibility leaks)
         if st.session_state["cached_district"] != "All Districts":
             global_triage = global_triage[global_triage['district_name'] == st.session_state["cached_district"]]
             
