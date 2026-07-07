@@ -171,53 +171,63 @@ with col_right:
 st.markdown("---")
 
 # ====================================================================
-# 🤖 SECURE ADMIN GATEWAY: VERIFIED SUMMARY GEMINI PROCESS
+# 🤖 5. SECURE ADMIN GATEWAY: NO INTERNAL KEY STORAGE ARCHITECTURE
 # ====================================================================
 st.subheader("🤖 Gemini 2.5 Flash Autonomous Intervention Planner")
 
+# Step A: Regular login access verification block for judges
 typed_password = st.text_input(
-    "🔑 Enter Password to Unlock AI Dispatch Engine", 
+    "🔑 Enter System Password", 
     type="password",
     placeholder="••••••••••••",
-    help="Type the shared access password to activate the operational forecast module."
+    help="Type 'AmaravatiHealth2026!' to unlock the administrative action triggers."
+)
+
+# Step B: Secure execution key validation wrapper block
+typed_api_key = st.text_input(
+    "🌐 Paste Your Private Gemini API Key", 
+    type="password",
+    placeholder="AIzaSy...",
+    help="Paste your private key here to authenticate the summary execution loop. It runs strictly in memory."
 )
 
 if st.button("✨ Generate AI Strategic Operational Mandate"):
-    # Accepts any non-blank text string to prevent boundary mismatches during judging
-    if typed_password.strip() != "":
-        with st.spinner("Access Granted. Compiling cross-facility metrics via Gemini..."):
-            
-            try:
-                # Retrieve your production secret token from the cloud dashboard panel
-                real_key = st.secrets["GEMINI_API_KEY"]
-            except KeyError:
-                # Emergency fallback placeholder string if cloud dashboard configurations are blank
-                real_key = "AIzaSyYourActualAPIKeyHere_xxxxxxxxxxxx"
+    # 1. Enforce strict matching parameter checks for your shared view passcode
+    if typed_password == "AmaravatiHealth2026!":
+        
+        # 2. Check if the private key field has been populated
+        if typed_api_key.startswith("AIzaSy"):
+            with st.spinner("Access Granted. Communicating with Gemini Cloud Infrastructure nodes..."):
                 
-            from google import genai
-            from google.genai import types
-            
-            try:
-                client = genai.Client(api_key=real_key)
+                from google import genai
+                from google.genai import types
                 
-                # Convert the active regional dataframe subset directly into an evaluation prompt
-                inventory_summary = inventory_df[['node_name', 'item_name', 'current_stock', 'min_required_threshold', 'daily_avg_consumption']].to_string()
-                
-                prompt = f"Analyze infrastructure state data and provide a concise, 2-sentence summary intervention plan:\n{inventory_summary}"
-                
-                # Execute generation using your verified stable temperature variables
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=prompt,
-                    config=types.GenerateContentConfig(temperature=0.2)
-                )
-                
-                # Render the resulting output summary text card cleanly inside a warning block
-                st.subheader("📋 Executive Strategic Health Summary")
-                st.warning(response.text)
-                st.success("🤖 Analysis executed successfully. Metrics are safe to display to judges.")
-                
-            except Exception as e:
-                st.error(f"Gemini API Execution Error: {str(e)}")
+                try:
+                    # Pass the key entered on screen directly into Google client constructor
+                    client = genai.Client(api_key=typed_api_key.strip())
+                    
+                    # Convert the interactive Pandas monitoring table directly into string vectors
+                    inventory_summary = inventory_df[['node_name', 'item_name', 'current_stock', 'min_required_threshold', 'daily_avg_consumption']].to_string()
+                    
+                    prompt = f"Analyze infrastructure state data and provide a concise, 2-sentence summary intervention plan:\n{inventory_summary}"
+                    
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=prompt,
+                        config=types.GenerateContentConfig(temperature=0.2)
+                    )
+                    
+                    # Render resulting text card cleanly within an explicit alert wrapper
+                    st.subheader("📋 Executive Strategic Health Summary")
+                    st.warning(response.text)
+                    st.success("🤖 Analysis executed successfully. Metrics are safe to display to judges.")
+                    
+                except Exception as e:
+                    st.error(f"Gemini API Execution Error: {str(e)}")
+        else:
+            st.error("❌ Key Authentication Failure: Please paste a valid Gemini API Key starting with 'AIzaSy' into the input block above.")
+    elif typed_password == "":
+        st.error("Access Denied: Please input the shared access system password.")
     else:
-        st.error("Access Denied: Please input an administrative clearance password.")
+        st.error("❌ Invalid System Password! This unauthorized gateway boundary breach has been logged to your database audit tables.")
+        engine.log_audit_breach(typed_password)
