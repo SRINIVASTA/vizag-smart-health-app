@@ -273,7 +273,7 @@ if st.session_state["auth_logged_in"]:
         col_g1, col_g2 = st.columns(2)
         with col_g1: st.pyplot(local_stock_chart(inventory_df, L['stock_title']))
         with col_g2: st.pyplot(local_risk_chart(st.session_state["cached_district"], L['risk_title']))
-# app.py — BLOCK 3: PART A (FRONT-END WORKFLOW INTERFACES)
+# app.py — BLOCK 3: PART A (FRONT-END WORKFLOW INTERFACES WITH GEOSPATIAL MAPS)
 
 # Ensure Block 3 only executes if the user has a valid active login session matrix
 if st.session_state["auth_logged_in"]:
@@ -365,7 +365,7 @@ if st.session_state["auth_logged_in"]:
             st.success("🟢 No patients waiting in your facility consultation queue.")
 
     # -------------------------------------------------------------
-    # ROLE WORKFLOW VIEW 3: PHARMACIST DELIVERY DESK WITH GPS MANIFEST
+    # ROLE WORKFLOW VIEW 3: PHARMACIST DELIVERY DESK WITH INTERACTIVE GPS MAPPING
     # -------------------------------------------------------------
     elif st.session_state["cached_role"] == "Pharmacist":
         st.subheader(L['pharma_title'])
@@ -397,13 +397,22 @@ if st.session_state["auth_logged_in"]:
                     if "Drone" in delivery_method:
                         target_row = orders_df[orders_df['prescription_id'] == target_rx].iloc[0]
                         st.warning(f"✈️ Launching drone resupply payload.")
+                        
+                        # Build a temporary mapping dataframe required by Streamlit's native st.map framework
+                        map_data = pd.DataFrame({
+                            'lat': [float(target_row['latitude'])],
+                            'lon': [float(target_row['longitude'])]
+                        })
+                        
+                        # 🌐 LIVE GEOSPATIAL MAP COMPONENT OVERLAY
+                        st.markdown(f"##### 🗺️ Live Flight Telemetry Map Target: **{target_row['node_name']}**")
+                        st.map(map_data, zoom=12, use_container_width=True)
+                        
                         st.markdown(f"""
                             <div style='background-color:#155724; padding:15px; border-radius:8px; border:2px solid #28a745; margin-top:15px;'>
-                                <h5 style='color:#d4edda; margin:0;'>✈️ BVLOS Autonomous Payload Locked & Dispatched</h5>
-                                <p style='color:#fff; font-size:13px; margin:8px 0 0 0;'>
-                                    <b>Target Facility Hub:</b> {target_row['node_name']}<br>
-                                    <b>Destination GPS Coordinates:</b> Lat {target_row['latitude']}°, Lon {target_row['longitude']}°<br>
-                                    <b>Aero-Logistics Status:</b> Flying Drone route payload generation engine active via src/drone_logistics.py.
+                                <p style='color:#fff; font-size:13px; margin:0;'>
+                                    <b>Destination GPS Coordinates:</b> Latitude {target_row['latitude']}°, Longitude {target_row['longitude']}°<br>
+                                    <b>Status:</b> Flight paths locked. Drone route generation active via <code>src/drone_logistics.py</code>.
                                 </p>
                             </div>
                         """, unsafe_allow_html=True)
