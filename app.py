@@ -7,7 +7,6 @@ import src.predictive_engine as engine
 
 # 🛠️ EMBEDDED AUTOMATIC DATABASE CREATION ENGINE
 def build_native_database_instance():
-    """Constructs the local smart_health database node from the sql schema template file."""
     os.makedirs("data", exist_ok=True)
     conn = sqlite3.connect("data/smart_health.db")
     cursor = conn.cursor()
@@ -40,8 +39,6 @@ def build_native_database_instance():
     # 2. Map Medical Duty Personnel
     doctors = [
         ('DOC-VSP-001', 'IN-AP-VSP-PND', 'Dr. S. Srinivasa Rao', 'General Medicine', 1),
-        ('DOC-VSP-002', 'IN-AP-VSP-PND', 'Dr. K. Anuradha', 'Pediatrics', 1),
-        ('DOC-VSP-003', 'IN-AP-VSP-BHM', 'Dr. A. Lakshmi Prasanna', 'General Medicine', 0), 
         ('DOC-VZM-001', 'IN-AP-VZM-GJN', 'Dr. Ch. Koteswara Rao', 'General Medicine', 1),
         ('DOC-SKL-001', 'IN-AP-SKL-RUR', 'Dr. K. Venkataswamy', 'General Medicine', 1)
     ]
@@ -73,14 +70,7 @@ def build_native_database_instance():
     ]
     cursor.executemany("INSERT INTO inventory VALUES (?, ?, ?, ?, ?)", inventory_data)
 
-    # 6. Patient Flows
-    triage_data = [
-        ('AP-1422', 'IN-AP-VSP-PND', 'sha256_hash_xyz1', '9848022338', 'High Fever, Vomiting, Body Pains', 'WAITING'),
-        ('AP-1423', 'IN-AP-SKL-RUR', 'sha256_hash_xyz2', '9440123456', 'Acute Snake Bite on Foot', 'WAITING')
-    ]
-    cursor.executemany("INSERT INTO patient_triage_queue VALUES (?, ?, ?, ?, ?, ?)", triage_data)
-
-    # 7. Bed and Syndromic Anomaly Scores
+    # 6. Bed and Syndromic Anomaly Scores
     node_ops = [
         ('IN-AP-VSP-PND', 50, 44, 0.88),  
         ('IN-AP-VSP-BHM', 30, 10, 0.12),
@@ -93,179 +83,211 @@ def build_native_database_instance():
     conn.commit()
     conn.close()
 
-# Evaluate database integrity status before execution loop begins
 if not os.path.exists("data/smart_health.db") or os.path.getsize("data/smart_health.db") == 0:
     build_native_database_instance()
 
 st.set_page_config(layout="wide", page_title="Bharat Health AI Command")
-# app.py — BLOCK 2: VISUAL INTERFACE
-# Custom AP Government Branding Styling Banner
+# app.py — BLOCK 2: DYNAMIC SECURITY LAYER & USER DIRECTORY
 st.markdown("""
     <div style='background-color:#003A70;padding:15px;border-radius:10px;margin-bottom:20px'>
-        <h1 style='color:white;margin:0;font-family:sans-serif;'>🌐 Bharat Health AI: Multi-District Aero-Logistics Network</h1>
-        <p style='color:#FFC107;margin:5px 0 0 0;'>Track 3: Smart Health Deployment Node — Andhra Pradesh Pilot</p>
+        <h1 style='color:white;margin:0;font-family:sans-serif;'>🌐 Bharat Health AI: Decentralized Administrative Portal</h1>
+        <p style='color:#FFC107;margin:5px 0 0 0;'>Track 3: Multi-Tier Governance & Live Workflow Verification Node</p>
     </div>
 """, unsafe_allow_html=True)
 
-# 1. District Selection Context Filter Sidebar
-st.sidebar.header("📍 Regional Jurisdiction Matrix")
-district_options = ["All Districts", "Visakhapatnam", "Vizianagaram", "Srikakulam"]
-selected_district = st.sidebar.selectbox("Select Surveillance Scope", district_options)
+# 1. Setup Password Login Gate inside Sidebar for Authorization Verification
+st.sidebar.header("🔐 Command Clearance Desk")
+access_password = st.sidebar.text_input("Enter Clearance Password", type="password", placeholder="••••••••••••")
 
-# 2. Extract Data Telemetry from your schema structure
+# Map password strings to target regional scopes
+current_scope = "DENIED"
+selected_district = "All Districts"
+
+if access_password == "AmaravatiHealth2026!":
+    current_scope = "STATE"
+    st.sidebar.success("🟢 Authenticated: AP State Admin View unlocked.")
+    # Allow state admin to switch between districts manually via a dropdown box
+    selected_district = st.sidebar.selectbox("Select Target District Scope", ["All Districts", "Visakhapatnam", "Vizianagaram", "Srikakulam"])
+elif access_password == "VizagDSU99!":
+    current_scope = "DISTRICT"
+    selected_district = "Visakhapatnam"
+    st.sidebar.success("🟢 Authenticated: Visakhapatnam District Scope locked.")
+elif access_password == "Vizianagaram99!":
+    current_scope = "DISTRICT"
+    selected_district = "Vizianagaram"
+    st.sidebar.success("🟢 Authenticated: Vizianagaram District Scope locked.")
+elif access_password == "Srikakulam99!":
+    current_scope = "DISTRICT"
+    selected_district = "Srikakulam"
+    st.sidebar.success("🟢 Authenticated: Srikakulam District Scope locked.")
+elif access_password != "":
+    st.sidebar.error("❌ Access Denied: Invalid Authentication Token.")
+
+# Run initial stock balancing calculations
 inventory_df, calculated_transfers = engine.run_cross_tier_supply_balancing()
 
-if selected_district != "All Districts":
-    inventory_df = inventory_df[inventory_df['district_name'] == selected_district]
-
-# 3. Render Visual Analytics Side-by-Side
-col1, col2 = st.columns(2)
-with col1:
-    if not inventory_df.empty:
-        st.pyplot(engine.generate_stock_prediction_chart(inventory_df))
-    else:
-        st.info("No active inventory records found for this district.")
-
-with col2:
-    st.pyplot(engine.generate_epidemic_risk_chart(selected_district))
-
-st.markdown("---")
-
-# 4. Display Real-Time Triage Queues and Clinical Personnel Metrics
-col_left, col_right = st.columns(2)
-
-with col_left:
-    st.subheader("📋 Active Patient Triage Logs (Aadhaar Hashed)")
-    conn = sqlite3.connect("data/smart_health.db")
-    triage_query = """
-        SELECT t.token_id, h.node_name, t.symptoms_logged, t.status, h.district_name
-        FROM patient_triage_queue t
-        JOIN administrative_hierarchy h ON t.node_id = h.node_id
-    """
-    triage_df = pd.read_sql_query(triage_query, conn)
-    conn.close()
-    
+if current_scope != "DENIED":
+    # Apply location filters to analytical dataframes
     if selected_district != "All Districts":
-        triage_df = triage_df[triage_df['district_name'] == selected_district]
-    
-    st.dataframe(triage_df[['token_id', 'node_name', 'symptoms_logged', 'status']], use_container_width=True, hide_index=True)
+        inventory_df = inventory_df[inventory_df['district_name'] == selected_district]
 
-with col_right:
-    st.subheader("👨‍⚕️ Medical Practitioner Attendance")
-    conn = sqlite3.connect("data/smart_health.db")
-    doc_query = """
-        SELECT d.doctor_name, h.node_name, d.specialization, 
-               CASE WHEN d.active_status = 1 THEN '🟢 Present' ELSE '🔴 Absent' END as Duty_Status,
-               h.district_name
-        FROM doctors d
-        JOIN administrative_hierarchy h ON d.node_id = h.node_id
-    """
-    doc_df = pd.read_sql_query(doc_query, conn)
-    conn.close()
+    # Render Charts Matrix
+    c1, c2 = st.columns(2)
+    with c1: st.pyplot(engine.generate_stock_prediction_chart(inventory_df))
+    with c2: st.pyplot(engine.generate_epidemic_risk_chart(selected_district))
+
+    st.markdown("---")
+    st.subheader(f"👥 Human Resource Directory: {selected_district} Jurisdiction")
     
+    # Extract staff listings dynamically using relational joins
+    conn = sqlite3.connect("data/smart_health.db")
+    
+    doc_df = pd.read_sql_query("SELECT d.doctor_name as Name, h.node_name as Facility, d.specialization as Detail, h.district_name FROM doctors d JOIN administrative_hierarchy h ON d.node_id = h.node_id", conn)
+    asha_df = pd.read_sql_query("SELECT a.worker_name as Name, h.node_name as Facility, a.assigned_village as Detail, h.district_name FROM asha_workers a JOIN administrative_hierarchy h ON a.node_id = h.node_id", conn)
+    phr_df = pd.read_sql_query("SELECT p.employee_name as Name, h.node_name as Facility, 'Pharmacy Manager' as Detail, h.district_name FROM pharmacists p JOIN administrative_hierarchy h ON p.node_id = h.node_id", conn)
+    conn.close()
+
     if selected_district != "All Districts":
         doc_df = doc_df[doc_df['district_name'] == selected_district]
-        
-    st.dataframe(doc_df[['doctor_name', 'node_name', 'Duty_Status']], use_container_width=True, hide_index=True)
-# app.py — BLOCK 3: AI DISPATCH GATEWAY
-# app.py — BLOCK 3: AI DISPATCH GATEWAY WITH LIVE DATABASE UPDATES
-st.markdown("---")
+        asha_df = asha_df[asha_df['district_name'] == selected_district]
+        phr_df = phr_df[phr_df['district_name'] == selected_district]
 
-# ====================================================================
-# 🤖 5. SECURE ADMIN GATEWAY: LIVE DATABASE UPDATING ARCHITECTURE
-# ====================================================================
-st.subheader("🤖 Gemini 2.5 Flash Autonomous Intervention Planner")
-
-# Step A: Regular login access verification block for judges
-typed_password = st.text_input(
-    "🔑 Enter System Password", 
-    type="password",
-    placeholder="••••••••••••",
-    help="Type 'AmaravatiHealth2026!' to unlock the administrative action triggers."
-)
-
-# Step B: Secure execution key validation wrapper block
-typed_api_key = st.text_input(
-    "🌐 Paste Your Private Gemini API Key", 
-    type="password",
-    placeholder="Paste your Google AI Studio or Vertex API key...",
-    help="Paste your private key here to authenticate the summary execution loop."
-)
-
-if st.button("✨ Generate AI Strategic Operational Mandate & Update Database"):
-    clean_password = typed_password.strip()
-    clean_api_key = typed_api_key.strip()
+    # Display Personnel categories side by side
+    col_d, col_a, col_p = st.columns(3)
+    with col_d:
+        st.markdown("🩺 **Medical Practitioners**")
+        st.dataframe(doc_df[['Name', 'Facility']], use_container_width=True, hide_index=True)
+    with col_a:
+        st.markdown("🌾 **ASHA Ground Field Workers**")
+        st.dataframe(asha_df[['Name', 'Detail']], use_container_width=True, hide_index=True)
+    with col_p:
+        st.markdown("💊 **Accredited Pharmacists**")
+        st.dataframe(phr_df[['Name', 'Facility']], use_container_width=True, hide_index=True)
+else:
+    st.info("🔒 Please enter a valid administrative password in the left sidebar to unlock regional healthcare records.")
+# app.py — BLOCK 3: LIVE OPERATIONAL HEALTH WORKFLOW ENGINE
+if current_scope != "DENIED":
+    st.markdown("---")
+    st.header("🔄 Live Closed-Loop Care Workflow Simulation")
     
-    if clean_password == "AmaravatiHealth2026!":
-        if len(clean_api_key) > 5:
-            with st.spinner("Access Granted. Balancing district nodes and executing database modifications..."):
+    tab1, tab2, tab3 = st.tabs(["1️⃣ ASHA Ground Intake Desk", "2️⃣ Doctor Evaluation Portal", "3️⃣ Pharmacist Fulfillment & Drone Desk"])
+
+    # -------------------------------------------------------------
+    # STEP 1: ASHA INTAKE LOGGING DESK
+    # -------------------------------------------------------------
+    with tab1:
+        st.subheader("🌾 Frontline Patient Intake Registration Matrix")
+        with st.form("asha_intake_form"):
+            patient_phone = st.text_input("Patient Contact Number (Phone)", "9848022338")
+            symptoms = st.text_area("Logged Symptoms Description", "Acute High Fever, Severe Headaches, Body Dehydration")
+            bp_sys = st.number_input("Blood Pressure - Systolic (mmHg)", 120, 200, 130)
+            bp_dia = st.number_input("Blood Pressure - Diastolic (mmHg)", 70, 120, 85)
+            consult_type = st.selectbox("Requested Mode of Consultation", ["e-Sanjeevani Video Call Telehealth", "Physical Local OPD Desk"])
+            target_node = st.selectbox("Intake Facility Target Destination Node", ["IN-AP-VSP-PND", "IN-AP-VZM-GJN", "IN-AP-SKL-RUR"])
+            
+            if st.form_submit_button("📥 Push Triage Metrics to Clinical Queue"):
+                conn = sqlite3.connect("data/smart_health.db")
+                cursor = conn.cursor()
+                token_id = f"AP-{cursor.execute('SELECT COUNT(*) FROM patient_triage_queue').fetchone()[0] + 1001}"
+                vitals_payload = f"{symptoms} | BP: {bp_sys}/{bp_dia} mmHg | Mode: {consult_type}"
                 
-                from google import genai
-                from google.genai import types
+                cursor.execute("INSERT INTO patient_triage_queue (token_id, node_id, aadhaar_hash, patient_phone, symptoms_logged, status) VALUES (?, ?, ?, ?, ?, ?)",
+                               (token_id, target_node, "sha256_hashed_identity_token", patient_phone, vitals_payload, 'WAITING'))
+                conn.commit()
+                conn.close()
+                st.success(f"🎉 Patient case generated successfully! Token ID assigned: **{token_id}**. Routed to Medical Doctor's evaluation pool.")
+
+    # -------------------------------------------------------------
+    # STEP 2: DOCTOR CLINICAL PRESCRIPTION PORTAL
+    # -------------------------------------------------------------
+    with tab2:
+        st.subheader("🩺 Medical Practitioner Evaluation Pool")
+        conn = sqlite3.connect("data/smart_health.db")
+        waiting_patients = pd.read_sql_query("SELECT * FROM patient_triage_queue WHERE status = 'WAITING'", conn)
+        conn.close()
+        
+        if not waiting_patients.empty:
+            st.dataframe(waiting_patients[['token_id', 'node_id', 'symptoms_logged']], use_container_width=True, hide_index=True)
+            with st.form("doctor_prescription_form"):
+                selected_token = st.selectbox("Select Patient Token to Treat", waiting_patients['token_id'].tolist())
+                medication = st.selectbox("Prescribe Required Medical Formulation", ["Paracetamol Tabs", "Anti-Venom Vials", "Amoxicillin Caps"])
+                dosage = st.text_input("Dosage Instructions Matrix", "500mg - 1 tablet after meals twice daily for 5 days")
+                doc_name = st.text_input("Attending Practitioner Signature", "Dr. S. Srinivasa Rao")
                 
-                try:
-                    # 1. Fire Gemini to generate the human-readable summary text card
-                    client = genai.Client(api_key=clean_api_key)
-                    inventory_summary = inventory_df[['node_name', 'item_name', 'current_stock', 'min_required_threshold', 'daily_avg_consumption']].to_string()
+                if st.form_submit_button("✍️ Authorize and Sign Digital Prescription"):
+                    conn = sqlite3.connect("data/smart_health.db")
+                    cursor = conn.cursor()
+                    # Extract facility node index link safely
+                    node_id = cursor.execute("SELECT node_id FROM patient_triage_queue WHERE token_id = ?", (selected_token,)).fetchone()[0]
+                    consult_mode = cursor.execute("SELECT symptoms_logged FROM patient_triage_queue WHERE token_id = ?", (selected_token,)).fetchone()[0].split(" | ")[-1].replace("Mode: ", "")
                     
-                    prompt = f"Analyze infrastructure state data and provide a concise, 2-sentence summary intervention plan:\n{inventory_summary}"
-                    response = client.models.generate_content(
-                        model='gemini-2.5-flash',
-                        contents=prompt,
-                        config=types.GenerateContentConfig(temperature=0.2)
-                    )
-                    
-                    # 2. RUN LIVE SQL TRANSACTIONS (This updates the actual database values)
+                    cursor.execute("INSERT INTO patient_prescriptions (token_id, node_id, doctor_name, medication_name, dosage_instructions, consult_mode, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                   (selected_token, node_id, doc_name, medication, dosage, consult_mode, 'PENDING'))
+                    cursor.execute("UPDATE patient_triage_queue SET status = 'COMPLETED' WHERE token_id = ?", (selected_token,))
+                    conn.commit()
+                    conn.close()
+                    st.success(f"🏥 Prescription for case **{selected_token}** signed and transmitted to Pharmacy Counter for fulfillment routing.")
+        else:
+            st.info("🟢 Clinical Queue Clear: No patients are currently waiting in the consultation tier.")
+
+    # -------------------------------------------------------------
+    # STEP 3: PHARMACIST FULFILLMENT & DRONE LOGISTICS DESK
+    # -------------------------------------------------------------
+    with tab3:
+        st.subheader("💊 Pharmacy Dispensation Desk & Aero-Logistics Network")
+        conn = sqlite3.connect("data/smart_health.db")
+        pending_orders = pd.read_sql_query("SELECT p.*, h.node_name FROM patient_prescriptions p JOIN administrative_hierarchy h ON p.node_id = h.node_id WHERE p.status = 'PENDING'", conn)
+        conn.close()
+        
+        if not pending_orders.empty:
+            st.dataframe(pending_orders[['prescription_id', 'token_id', 'node_name', 'medication_name', 'consult_mode']], use_container_width=True, hide_index=True)
+            with st.form("pharmacy_fulfillment_form"):
+                selected_order = st.selectbox("Select Prescription ID to Dispense", pending_orders['prescription_id'].tolist())
+                
+                # Dynamic Routing Option
+                delivery_method = st.radio("Fulfillment Logistics Path", ["📦 Standard Over-the-Counter Physical Handout", "✈️ Autonomous BVLOS Drone Resupply Flight Path"])
+                
+                if st.form_submit_button("🚀 Finalize Dispensation Order"):
                     conn = sqlite3.connect("data/smart_health.db")
                     cursor = conn.cursor()
                     
-                    # Fix 1: Transfer Paracetamol from Bheemili (Surplus) to Pendurthi (Deficit)
-                    cursor.execute("""
-                        UPDATE inventory 
-                        SET current_stock = current_stock - 5000 
-                        WHERE node_id = 'IN-AP-VSP-BHM' AND item_name = 'Paracetamol Tabs'
-                    """)
-                    cursor.execute("""
-                        UPDATE inventory 
-                        SET current_stock = current_stock + 5000 
-                        WHERE node_id = 'IN-AP-VSP-PND' AND item_name = 'Paracetamol Tabs'
-                    """)
+                    # Fetch details for delivery mapping
+                    order_info = cursor.execute("SELECT node_id, medication_name FROM patient_prescriptions WHERE prescription_id = ?", (selected_order,)).fetchone()
+                    target_node, rx_item = order_info[0], order_info[1]
                     
-                    # Fix 2: Transfer Anti-Venom from Palasa (Surplus) to Srikakulam Rural (Deficit)
-                    cursor.execute("""
-                        UPDATE inventory 
-                        SET current_stock = current_stock - 40 
-                        WHERE node_id = 'IN-AP-SKL-PLS' AND item_name = 'Anti-Venom Vials'
-                    """)
-                    cursor.execute("""
-                        UPDATE inventory 
-                        SET current_stock = current_stock + 40 
-                        WHERE node_id = 'IN-AP-SKL-RUR' AND item_name = 'Anti-Venom Vials'
-                    """)
-                    
-                    # Log the successful deployment event to the immutable compliance trails
-                    cursor.execute("""
-                        INSERT INTO system_audit_logs (user_role, node_id, action_type, details)
-                        VALUES (?, ?, ?, ?)
-                    """, ('DISTRICT_OFFICER', 'GLOBAL_GATEWAY', 'MEDICINE_DISPENSE', 'AI Mandate Executed: Balanced Paracetamol and Anti-Venom metrics across tiers.'))
-                    
+                    # Update inventory balances
+                    cursor.execute("UPDATE inventory SET current_stock = current_stock - 1 WHERE node_id = ? AND item_name = ?", (target_node, rx_item))
+                    cursor.execute("UPDATE patient_prescriptions SET status = 'FULFILLED' WHERE prescription_id = ?", (selected_order,))
                     conn.commit()
                     conn.close()
                     
-                    # Render resulting text card cleanly on the UI screen layout interface
+                    st.success(f"✅ Order #{selected_order} dispatched successfully!")
+                    if "Drone" in delivery_method:
+                        st.warning(f"✈️ BVLOS Autonomous Payload Locked: Drone launching to deliver {rx_item} to regional facility node ({target_node}). Coordinates mapped via src/drone_logistics.py.")
+        else:
+            st.info("🟢 All digital prescriptions have been successfully dispensed across nodes.")
+
+    # -------------------------------------------------------------
+    # AI FORECAST REPORTING LAYER (From your successful Colab test)
+    # -------------------------------------------------------------
+    st.markdown("---")
+    st.subheader("🤖 Gemini 2.5 Flash Autonomous Intervention Planner")
+    typed_api_key = st.text_input("🌐 Paste Your Private Gemini API Key to run Anomaly Analysis", type="password", placeholder="AIza...")
+    
+    if st.button("✨ Run AI Demand Analytics"):
+        if typed_api_key.strip().startswith("AIza") and len(typed_api_key.strip()) > 10:
+            with st.spinner("Connecting to Gemini Model..."):
+                try:
+                    from google import genai
+                    from google.genai import types
+                    client = genai.Client(api_key=typed_api_key.strip())
+                    inventory_summary = inventory_df[['node_name', 'item_name', 'current_stock', 'min_required_threshold', 'daily_avg_consumption']].to_string()
+                    prompt = f"Analyze infrastructure state data and provide a concise, 2-sentence summary intervention plan:\n{inventory_summary}"
+                    
+                    response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=types.GenerateContentConfig(temperature=0.2))
                     st.subheader("📋 Executive Strategic Health Summary")
                     st.warning(response.text)
-                    st.success("🤖 AI analysis executed and live SQLite database entries modified successfully! Refresh your page to see the new stock charts.")
-                    
-                    # Propose interactive restart trigger to force component redraws
-                    st.button("🔄 Reload Dashboard Charts Now")
-                    
                 except Exception as e:
                     st.error(f"Gemini API Execution Error: {str(e)}")
         else:
-            st.error("❌ Key Authentication Failure: Please paste your active Gemini API key into the input block above.")
-    elif clean_password == "":
-        st.error("Access Denied: Please input the shared access system password.")
-    else:
-        st.error("❌ Invalid System Password!")
-        engine.log_audit_breach(clean_password)
+            st.error("Please insert a valid developer API Key to unlock this module.")
