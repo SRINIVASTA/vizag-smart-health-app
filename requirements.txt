@@ -2,3 +2,5 @@ streamlit
 panda
 numpy
 matplotlib
+sqlite3
+google-genai
