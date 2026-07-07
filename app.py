@@ -385,7 +385,8 @@ if st.session_state["auth_logged_in"]:
                     rx_item = cursor.execute("SELECT medication_name FROM patient_prescriptions WHERE prescription_id = ?", (target_rx,)).fetchone()[0]
                     cursor.execute("UPDATE inventory SET current_stock = current_stock - 1 WHERE node_id = ? AND item_name = ?", (st.session_state["cached_facility"], rx_item))
                     cursor.execute("UPDATE patient_prescriptions SET status = 'FULFILLED' WHERE prescription_id = ?", (target_rx,))
-                    conn.commit() conn.close()
+                    conn.commit() 
+                    conn.close()
                     st.success(f"✅ Order #{target_rx} Dispatched!")
                     if "Drone" in delivery_method: st.warning(f"✈️ Launching drone resupply payload.")
                     st.rerun()
