@@ -1,3 +1,22 @@
+# app.py snippet for rendering layout
+import streamlit as st
+import src.predictive_engine as engine
+
+st.title("Track 3: Smart Health Operations Command")
+
+# 1. Fire calculations
+inventory_df, calculated_transfers = engine.run_cross_tier_supply_balancing()
+
+# 2. Render UI visual graphics
+st.pyplot(engine.generate_stock_prediction_chart(inventory_df))
+st.pyplot(engine.generate_epidemic_risk_chart())
+
+# 3. Fire Gemini API Insight Analysis Engine
+if st.button("✨ Generate AI Strategic Operational Mandate"):
+    with st.spinner("Processing database telemetry logs with Gemini..."):
+        ai_brief = engine.generate_district_health_forecast(inventory_df, calculated_transfers)
+        st.markdown(ai_brief)
+
 import streamlit as st
 import pandas as pd
 import sqlite3
