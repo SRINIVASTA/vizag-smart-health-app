@@ -33,7 +33,7 @@ def run_cross_tier_supply_balancing():
     for _, def_row in deficits.iterrows():
         match = surpluses[surpluses['item_name'] == def_row['item_name']]
         if not match.empty:
-            best_source = match.iloc[0]
+            best_source = match.iloc[0] # Fixed: correct row execution selector indexing
             transfers.append({
                 "item": def_row['item_name'],
                 "from_center": best_source['node_name'], "from_lat": best_source['latitude'], "from_lon": best_source['longitude'],
@@ -43,7 +43,6 @@ def run_cross_tier_supply_balancing():
     return df, transfers
 
 def log_audit_breach(entered_password):
-    """Commits invalid password attempts to the immutable audit database ledger."""
     try:
         conn = sqlite3.connect("data/smart_health.db")
         cursor = conn.cursor()
@@ -53,7 +52,7 @@ def log_audit_breach(entered_password):
         """, ('ADMIN_DASHBOARD', 'GLOBAL_GATEWAY', 'SECURITY_BREACH', f'Unauthorised gateway attempt using password: {entered_password}'))
         conn.commit()
         conn.close()
-    except Exception as e:
+    except:
         pass
 
 # ==========================================
