@@ -357,7 +357,8 @@ if st.session_state["auth_logged_in"]:
                     cursor.execute("INSERT INTO patient_prescriptions (token_id, node_id, doctor_name, medication_name, dosage_instructions, consult_mode, status) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')",
                                    (target_token, st.session_state["cached_facility"], "Attending Doctor", rx_med, rx_dose, mode))
                     cursor.execute("UPDATE patient_triage_queue SET status = 'COMPLETED' WHERE token_id = ?", (target_token,))
-                    conn.commit() conn.close()
+                    conn.commit() 
+                    conn.close()
                     st.success("🏥 Prescription Transmitted to Pharmacy Desk!")
                     st.rerun()
         else:
