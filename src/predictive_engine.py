@@ -33,7 +33,7 @@ def run_cross_tier_supply_balancing():
     for _, def_row in deficits.iterrows():
         match = surpluses[surpluses['item_name'] == def_row['item_name']]
         if not match.empty:
-            best_source = match.iloc[0] # Fixed: correct row execution selector indexing
+            best_source = match.iloc[0] # Fixed row index selector syntax mismatch
             transfers.append({
                 "item": def_row['item_name'],
                 "from_center": best_source['node_name'], "from_lat": best_source['latitude'], "from_lon": best_source['longitude'],
