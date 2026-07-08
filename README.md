@@ -170,22 +170,15 @@ The system enforces strict data isolation based on assigned roles:
 ---
 
 ## Security Guidelines
-1. **Mandatory Password Reset:** Users must change their default password upon their initial login session.
-2. **Session Timeouts:** Inactive hub and spoke medical portal sessions automatically expire after 15 minutes.
-3. **Environment Variable Safeguards:** For automated initialization pipelines, inject usernames and passwords securely using `.env` configurations:
+**Environment Variable Safeguards:** For automated initialization pipelines, inject usernames and passwords securely using `.env` configurations:
    ```bash
    SYS_ADMIN_USER="ap_state_admin"
    SYS_ADMIN_PASS="AmaravatiHealth2026!"
    ```
 
-## Setup & Installation
-
-1. Clone this repository locally:
-   ```bash
-   git clone 
 ## ✒️ Author and Credits
 
-* **Lead Architect & Developer:** [Srinivasta](https://github.com/SRINIVASTA) & My Team Mate:T.Pujitha Sri, BTECH (ECE), 2ND YEAR.
+* **Lead Architect & Developer:** [Srinivasta](https://github.com/SRINIVASTA) & My Team Mate:T.Pujitha Sri, BTECH (ECE), 2ND YEAR Student.
 
 ### Connect with Me
 - [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/srinivas-t-a-557637119/)  
