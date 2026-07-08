@@ -103,73 +103,86 @@ An enterprise-grade, offline-first health management platform designed for publi
 ---
 
 ## 🔑 Complete Operational Credentials Matrix
+# Health System User Management Portal
 
-To evaluate different organizational tiers within the platform, select your target **District** and **Facility Node** in the sidebar navigation matrix, then pick the corresponding authorized profile name from the **Username** selectbox dropdown list:
+This repository contains the configuration, deployment scripts, and credential distribution guidelines for the regional health management system. The portal manages role-based access control (RBAC) across regional hubs, spokes, and rural clinics.
 
-### 🏢 Cross-District Administrative Clearances
-
-| District Selector Context | Username Selection Option | Required Password | Authorized View & clearance Level |
-| :--- | :--- | :--- | :--- |
-| **Any District** | `ap_state_admin` | `AmaravatiHealth2026!` | State Surveillance (Unrestricted monitoring access to all 3 districts concurrently) |
-| **Visakhapatnam** | `vsp_district_officer` | `VizagDSU99!` | District Officer (Isolated analytics scope locked to Visakhapatnam) |
-| **Vizianagaram** | `vzm_district_officer` | `VizagDSU99!` | District Officer (Isolated analytics scope locked to Vizianagaram) |
-| **Srikakulam** | `skl_district_officer` | `VizagDSU99!` | District Officer (Isolated analytics scope locked to Srikakulam) |
-
-### 📍 District 1: Visakhapatnam Node Accounts
-
-| Targeted Facility Dropdown | Username Selection Option | Required Password | Authorized Frontline Role View |
-| :--- | :--- | :--- | :--- |
-| **Pendurthi CHC Hub** | `Dr. S. Srinivasa Rao` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
-| **Pendurthi CHC Hub** | `Dr. K. Anuradha` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
-| **Pendurthi CHC Hub** | `asha_worker` | `VillageASHA456` | ASHA Community Worker (Patient Intake Logger) |
-| **Pendurthi CHC Hub** | `pharma_person` | `PharmaStore456` | Pharmacist Store Manager (Fulfillment Desk) |
-| **Bheemili Hospital Spoke** | `Dr. A. Lakshmi Prasanna` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
-| **Gajuwaka Industrial PHC** | `Dr. P. Venkatesh` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
-| **Anakapalle Referral CHC** | `Dr. G. Satyanarayana` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
-
-### 📍 District 2: Vizianagaram Node Accounts
-
-| Targeted Facility Dropdown | Username Selection Option | Required Password | Authorized Frontline Role View |
-| :--- | :--- | :--- | :--- |
-| **Gajapathinagaram PHC** | `Dr. Ch. Koteswara Rao` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
-| **Gajapathinagaram PHC** | `asha_gajapathinagaram` | `VillageASHA456` | ASHA Community Worker (Patient Intake Logger) |
-| **Gajapathinagaram PHC** | `pharma_gajapathinagaram`| `PharmaStore456` | Pharmacist Store Manager (Fulfillment Desk) |
-| **Cheepurupalli Spoke CHC**| `Dr. M. Sridevi` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
-| **Sravankota Rural PHC** | `Dr. J. Ramana` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
-
-### 📍 District 3: Srikakulam Node Accounts
-
-| Targeted Facility Dropdown | Username Selection Option | Required Password | Authorized Frontline Role View |
-| :--- | :--- | :--- | :--- |
-| **Srikakulam Rural Center**| `Dr. K. Venkataswamy` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
-| **Srikakulam Rural Center**| `asha_srikakulam` | `VillageASHA456` | ASHA Community Worker (Patient Intake Logger) |
-| **Srikakulam Rural Center**| `pharma_srikakulam_rur` | `PharmaStore456` | Pharmacist Store Manager (Fulfillment Desk) |
-| **Palasa Super-Spec Spoke**| `Dr. Y. Appala Naidu` | `MedicalDoc123` | CHC Medical Practitioner (Clinical Queue Portal) |
+## Table of Contents
+- [Overview](#overview)
+- [System Architecture](#system-architecture)
+- [Role-Based Access Control (RBAC)](#role-based-access-control-rbac)
+- [Credentials Reference](#credentials-reference)
+- [Security Guidelines](#security-guidelines)
+- [Setup & Installation](#setup--installation)
 
 ---
 
-## 🧪 Comprehensive Cross-tier Validation Walkthrough
+## Overview
+The platform connects state administrators, district offices, hub/spoke medical facilities, community health workers (ASHA), and pharmacies into a single secure network. It ensures seamless data sharing for patient care, stock distribution, and regional health monitoring.
 
-Follow these exact operational walkthroughs to demonstrate your end-to-end architecture workflows to the grading panel:
+## System Architecture
+The network is split hierarchically into geographical nodes:
+- **State Level:** Overarching management across all districts.
+- **District Level:** Focused nodes for major administrative areas (Visakhapatnam, Vizianagaram, Srikakulam).
+- **Facility Level:** 
+  - **Hubs:** Comprehensive health centers managing data flow (e.g., Pendurthi CHC Hub).
+  - **Spokes:** Connected clinics reporting to a central hub (e.g., Bheemili Spoke).
+  - **Rural Units:** Remote locations delivering localized care (e.g., Gajapathinagaram, Srikakulam Rural).
 
-### Walkthrough A: Closed-Loop Digital Prescription Routing
-1. Set the sidebar location matrix to **Srikakulam** ➡️ **Srikakulam Rural Health Center**.
-2. Select **asha_srikakulam** from the username selector dropdown and input password: `VillageASHA456`.
-3. Fill out the *Patient Intake Logger* with test details (e.g., 12-digit Aadhaar), assign the case directly to **Dr. K. Venkataswamy**, and submit.
-4. Log out, maintain the location context, and log back in under **Dr. K. Venkataswamy** using password: `MedicalDoc123`.
-5. Locate the newly logged triage case. Toggle the consulting mode to *e-Sanjeevani Video Call Telehealth* to review video gates. Move to the *Formulate Digital Medical Prescription* panel, choose a medicine, type dosage instructions, and click **Issue Prescription to Pharmacy**.
-6. Log out and log back into the same center as **pharma_srikakulam_rur** (password: `PharmaStore456`). Toggle the active distribution mode to *Drone-Routed Aero Resupply*. You will see the doctor's prescription securely routed to the fulfillment queue. Click **Authorize Autonomous Drone Resupply Delivery** to fire the UAV simulation.
-   
-### Walkthrough B: Cross-District Secure Data Protection Block
-1. Choose **Dr. S. Srinivasa Rao** from the username dropdown. This practitioner belongs to **Visakhapatnam**.
-2. Intentionally change the sidebar location selector to a different territory context: **Srikakulam** ➡️ **Palasa Super-Specialty Spoke**.
-3. Input the password: `MedicalDoc123` and click Login.
-4. The system immediately detects the district boundary violation, flags a clear warning message block, hides all triage fields and active medical prescription form sheets, and switches into **Read-Only View Mode**, restricting the user solely to looking up the *Historical Patient Electronic Health Records (EHR Ledger)*.
+---
 
-### Walkthrough C: Administrative Jurisdiction Separation
-1. Log in under **vzm_district_officer** using password: `VizagDSU99!`. Access the administrative view panels to observe how the **Matplotlib asset charts** and drone logistics telemetry logs isolate data strictly to the **Vizianagaram** district lines.
-2. Log out and log in under **ap_state_admin** (password: `AmaravatiHealth2026!`). The layout expands instantly into unrestricted mode, compiling data from **Visakhapatnam, Vizianagaram, and Srikakulam** concurrently onto unified District Infection and Stock Exhaustion timelines.
+## Role-Based Access Control (RBAC)
+The system enforces strict data isolation based on assigned roles:
 
+| System Role | Scope of Access | Key Responsibilities |
+| :--- | :--- | :--- |
+| **State Administrator** | System-wide (All Districts) | Global configurations, master backups, broad reporting. |
+| **District Officer** | District-wide (Local Nodes) | Local facility approvals, district health audits. |
+| **Medical Doctor** | Hub/Spoke Specific | Patient diagnostics, electronic health records (EHR), referrals. |
+| **ASHA Worker** | Area / Field Level | Community health tracking, localized survey submissions. |
+| **Pharmacist** | Facility Counter | Inventory management, prescription fulfillment logs. |
+
+---
+
+## Credentials Reference
+
+> [!WARNING]  
+> The following staging matrix outlines preset local node user accounts. Never commit real production credentials to public version control.
+
+| System Role | Target Location / Node | User ID / Selection Option | Unique Password |
+| :--- | :--- | :--- | :--- |
+| State Administrator | All Districts | `ap_state_admin` | `AmaravatiHealth2026!` |
+| District Officer | Visakhapatnam | `vsp_district_officer` | `VizagCMO#2026!` |
+| District Officer | Vizianagaram | `vzm_district_officer` | `VizmCMO#2026!` |
+| District Officer | Srikakulam | `skl_district_officer` | `SklmCMO#2026!` |
+| Medical Doctor | Pendurthi CHC Hub (Vizag) | `Dr. S. Srinivasa Rao` | `SrinivasaDoc#77` |
+| Medical Doctor | Pendurthi CHC Hub (Vizag) | `Dr. K. Anuradha` | `AnuradhaPed#45` |
+| Medical Doctor | Bheemili Spoke (Vizag) | `Dr. A. Lakshmi Prasanna` | `LakshmiBhm#12` |
+| Medical Doctor | Gajapathinagaram (Vzm) | `Dr. Ch. Koteswara Rao` | `KoteswaraVzm#39` |
+| Medical Doctor | Srikakulam Rural (Skl) | `Dr. K. Venkataswamy` | `VenkatSklm#88` |
+| ASHA Worker | Pendurthi Area (Vizag) | `asha_worker` | `AshaVizag$Pnd` |
+| ASHA Worker | Gajapathinagaram (Vzm) | `asha_gajapathinagaram` | `AshaVizm$Gjn` |
+| ASHA Worker | Srikakulam Rural (Skl) | `asha_srikakulam` | `AshaSklm$Rur` |
+| Pharmacist | Pendurthi Counter (Vizag) | `pharma_person` | `PharmaPnd%99` |
+| Pharmacist | Gajapathinagaram (Vzm) | `pharma_gajapathinagaram` | `PharmaGjn%88` |
+| Pharmacist | Srikakulam Rural (Skl) | `pharma_srikakulam_rur` | `PharmaRur%77` |
+
+---
+
+## Security Guidelines
+1. **Mandatory Password Reset:** Users must change their default password upon their initial login session.
+2. **Session Timeouts:** Inactive hub and spoke medical portal sessions automatically expire after 15 minutes.
+3. **Environment Variable Safeguards:** For automated initialization pipelines, inject usernames and passwords securely using `.env` configurations:
+   ```bash
+   SYS_ADMIN_USER="ap_state_admin"
+   SYS_ADMIN_PASS="AmaravatiHealth2026!"
+   ```
+
+## Setup & Installation
+
+1. Clone this repository locally:
+   ```bash
+   git clone 
 ## ✒️ Author and Credits
 
 * **Lead Architect & Developer:** [Srinivasta](https://github.com/SRINIVASTA) & My Team Mate:T.Pujitha Sri, BTECH (ECE), 2ND YEAR.
