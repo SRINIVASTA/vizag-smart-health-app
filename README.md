@@ -3,6 +3,31 @@
 An integrated, multi-tiered digital healthcare ecosystem tailored for the Visakhapatnam region. This application maps directly onto the Indian administrative hierarchy (State ➔ Division ➔ District ➔ Mandal ➔ Panchayat ➔ Village) to power guided telemedicine, real-time epidemic tracking, and autonomous drone logistics for hard-to-reach tribal tracts like Araku and Paderu.
 
 ---
+# BUILD WITH AI: CODE FOR COMMUNITIES (VIZAG EDITION)
+Powered by Google Cloud | Hosted via Hack2skill & GDG Vizag
+
+### 🏛️ Parliamentary Track Patrons
+*   Sujeet Kumar (Hon'ble MP, Rajya Sabha) – Governance Innovation Lead
+*   Gaurav Gogoi (Hon'ble MP, Lok Sabha) – Public Challenge Ideator
+*   Bansuri Swaraj (Hon'ble MP, Lok Sabha) – Civic Progress Systems Advisor
+*   Sasmit Patra (Hon'ble MP, Rajya Sabha) – Local Governance Tech Mentor
+*   Lavu Sri Krishna Devarayalu (Hon'ble MP, Lok Sabha) – 'Kisan Alert' Challenge Mandate (Narasaraopet)
+*   Mathukumilli Bharat (Hon'ble MP, Lok Sabha) – Student Skill Deployment Catalyst
+
+### ⚡ GDG Vizag Core Leadership
+*   Usha Ramani Vemuru – Event Leader & Primary Organiser (Founder, GURUJADA)
+*   Sai Sampath Kumar Balivada & Satheesh Karnatakapu – Logistics & Co-Organisers
+*   Harsh Dattani – Strategic Ecosystem Advisor & Support
+
+### 🧠 AMA Technical Mentors & Experts
+*   Saurabh Mishra | Jay Thakkar | Belal Khan (@probelalkhan) | Ajoe Joseph 
+*   Namrata More | Chivukula Krishnamohan | Rakesh Asapanna | Darahas Muggu
+
+### 🛠️ Support, Infrastructure & Volunteering
+*   Jyothsna Ardhahakula – Event Volunteer
+*   Ashwini & Sayyed Emkay – Community Support Enablers (Ientity)
+
+---
 
 ## 🏗️ Repository Architecture
 
