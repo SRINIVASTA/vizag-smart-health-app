@@ -5,8 +5,7 @@ An integrated, multi-tiered digital healthcare ecosystem tailored for the Visakh
 🌐 **Live Interactive Web App:** [Launch Live Streamlit Dashboard](https://vizag-smart-health-app-hwpexsovxwurku4vqcuwpt.streamlit.app/))
 ## 🖥️ Project Presentation Pitch Deck
 
-[![Pitch Deck PDF](https://shields.io)](https://github.com/SRINIVASTA/msme-financial-health-passport/blob/main/MSME%20Financial%20Health%20Passport.pdf
-)
+[![Pitch Deck PDF](https://shields.io)](https://github.com/SRINIVASTA/vizag-smart-health-app/blob/main/Visakhapatnam%20Smart%20Health%20Presentation.pdf)
 
 📌 *Note for Judges: Click the red badge above to open our complete **Project Underwriting Pitch Deck PDF** directly within GitHub's native, interactive document viewer.*
 
