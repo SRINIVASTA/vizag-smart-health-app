@@ -2,7 +2,7 @@
 
 An integrated, multi-tiered digital healthcare ecosystem tailored for the Visakhapatnam region. This application maps directly onto the Indian administrative hierarchy (State ➔ Division ➔ District ➔ Mandal ➔ Panchayat ➔ Village) to power guided telemedicine, real-time epidemic tracking, and autonomous drone logistics for hard-to-reach tribal tracts like Araku and Paderu.
 
-🌐 **Live Interactive Web App:** [Launch Live Streamlit Dashboard](https://msme-financial-health-passport-7smsi6mdtx3jcawyp8qnx9.streamlit.app/))
+🌐 **Live Interactive Web App:** [Launch Live Streamlit Dashboard](https://vizag-smart-health-app-hwpexsovxwurku4vqcuwpt.streamlit.app/))
 ## 🖥️ Project Presentation Pitch Deck
 
 [![Pitch Deck PDF](https://shields.io)](https://github.com/SRINIVASTA/msme-financial-health-passport/blob/main/MSME%20Financial%20Health%20Passport.pdf
